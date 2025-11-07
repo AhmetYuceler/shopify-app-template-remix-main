@@ -1,0 +1,15 @@
+name = "dynamic-price-calculator"
+
+uid = "f7d6e2e2-a047-2139-77ee-cf3237459923d6ee3f1d"
+
+type = "theme"
+metafields = []
+
+[[extensions]]
+name = "dynamic-price-form"
+type = "theme_app_extension"
+handle = "dynamic-price-calculator"
+
+[[extensions.blocks]]
+type = "dynamic-price-form"
+name = "Dinamik Fiyat Hesaplayıcı"

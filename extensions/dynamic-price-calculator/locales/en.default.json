@@ -1,0 +1,18 @@
+{
+  "dynamic_price_calculator": {
+    "title": "Dynamic Price Calculator",
+    "description": "Enter your product dimensions and material to calculate your custom price",
+    "height_label": "Height (mm)",
+    "width_label": "Width (mm)",
+    "material_label": "Material",
+    "material_wood": "Wood",
+    "material_metal": "Metal",
+    "material_plastic": "Plastic",
+    "price_label": "Estimated Price",
+    "add_to_cart": "Add to Cart",
+    "adding_to_cart": "Adding...",
+    "success_message": "Product added to cart!",
+    "error_validation": "Please fill in all fields",
+    "error_generic": "An error occurred. Please try again."
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "dynamic_price_calculator": {
+    "title": "Dinamik Fiyat Hesaplayıcı",
+    "description": "Ürününüzün boy, en ve materyal bilgilerini girerek özel fiyatınızı hesaplayın",
+    "height_label": "Boy (mm)",
+    "width_label": "En (mm)",
+    "material_label": "Materyal",
+    "material_wood": "Ahşap",
+    "material_metal": "Metal",
+    "material_plastic": "Plastik",
+    "price_label": "Tahmini Fiyat",
+    "add_to_cart": "Sepete Ekle",
+    "adding_to_cart": "Ekleniyor...",
+    "success_message": "Ürün sepete eklendi!",
+    "error_validation": "Lütfen tüm alanları doldurun",
+    "error_generic": "Bir hata oluştu. Lütfen tekrar deneyin."
+  }
+}

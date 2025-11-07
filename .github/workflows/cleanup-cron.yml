@@ -1,0 +1,40 @@
+name: Cleanup Temp Products
+
+on:
+  schedule:
+    # Her 10 dakikada bir çalışır (UTC timezone)
+    - cron: '*/10 * * * *'
+  
+  # Manuel tetikleme için
+  workflow_dispatch:
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Call Cleanup Endpoint
+        run: |
+          curl -X POST \
+            -H "X-Cron-Secret: ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            ${{ secrets.APP_URL }}/api/cleanup-temp-products \
+            -w "\nHTTP Status: %{http_code}\n" \
+            -s -o response.json
+          
+          echo "Response:"
+          cat response.json
+          
+          # HTTP status kontrol et
+          STATUS=$(curl -X POST \
+            -H "X-Cron-Secret: ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            ${{ secrets.APP_URL }}/api/cleanup-temp-products \
+            -s -o /dev/null -w "%{http_code}")
+          
+          if [ "$STATUS" != "200" ]; then
+            echo "Error: HTTP $STATUS"
+            exit 1
+          fi
+          
+          echo "Cleanup completed successfully!"

@@ -30,3 +30,20 @@ model Session {
   collaborator  Boolean?  @default(false)
   emailVerified Boolean?  @default(false)
 }
+
+model TempProduct {
+  id                String   @id @default(uuid())
+  shop              String   // Hangi mağaza için oluşturuldu
+  productId         String   // Shopify'da oluşturulan ürün ID'si
+  variantId         String   // Oluşturulan varyant ID'si
+  height            Int      // Boy (mm)
+  width             Int      // En (mm)
+  material          String   // Materyal (Ahşap, Metal, Plastik)
+  price             Float    // Hesaplanan fiyat
+  createdAt         DateTime @default(now())
+  deleteAt          DateTime // 2 saat sonrası (createdAt + 2 saat)
+  deleted           Boolean  @default(false)
+  
+  @@index([shop, deleted])
+  @@index([deleteAt, deleted])
+}
