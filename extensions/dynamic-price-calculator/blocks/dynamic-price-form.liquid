@@ -76,12 +76,35 @@
       {%- comment -%} Hata mesajları {%- endcomment -%}
       <div class="error-message" id="error-message" style="display: none;"></div>
       
-      {%- comment -%} Sepete ekle butonu {%- endcomment -%}
+      {%- comment -%} Fiyat hesapla butonu {%- endcomment -%}
       <button 
-        type="submit" 
+        type="button" 
+        class="calculate-price-btn" 
+        id="calculate-price-btn"
+      >
+        <span class="btn-text">Fiyat Hesapla</span>
+      </button>
+      
+      {%- comment -%} Ürün oluştur butonu {%- endcomment -%}
+      <button 
+        type="button" 
+        class="create-product-btn" 
+        id="create-product-btn"
+        style="display: none;"
+      >
+        <span class="btn-text">Ürün Oluştur</span>
+        <span class="btn-loader" style="display: none;">
+          <span class="spinner"></span>
+          Oluşturuluyor...
+        </span>
+      </button>
+      
+      {%- comment -%} Sepete ekle butonu (ürün oluştuktan sonra gösterilecek) {%- endcomment -%}
+      <button 
+        type="button" 
         class="add-to-cart-btn" 
         id="add-to-cart-btn"
-        disabled
+        style="display: none;"
       >
         <span class="btn-text">Sepete Ekle</span>
         <span class="btn-loader" style="display: none;">
@@ -92,8 +115,11 @@
       
       {%- comment -%} Başarı mesajı {%- endcomment -%}
       <div class="success-message" id="success-message" style="display: none;">
-        ✓ Ürün sepete eklendi!
+        ✓ Ürün başarıyla sepete eklendi!
       </div>
+      
+      {%- comment -%} Info mesajı {%- endcomment -%}
+      <div class="info-message" id="info-message" style="display: none;"></div>
     </form>
   </div>
 </div>
@@ -205,10 +231,22 @@
     text-align: center;
   }
   
+  .info-message {
+    padding: 0.75rem;
+    background: #e3f2fd;
+    border: 1px solid #42a5f5;
+    border-radius: 4px;
+    color: #1565c0;
+    margin-top: 1rem;
+    text-align: center;
+    font-size: 0.9rem;
+  }
+  
+  .calculate-price-btn,
+  .create-product-btn,
   .add-to-cart-btn {
     width: 100%;
     padding: 1rem;
-    background: #4CAF50;
     color: white;
     border: none;
     border-radius: 4px;
@@ -216,6 +254,27 @@
     font-weight: 600;
     cursor: pointer;
     transition: background 0.2s;
+    margin-top: 0.5rem;
+  }
+  
+  .calculate-price-btn {
+    background: #2196F3;
+  }
+  
+  .calculate-price-btn:hover {
+    background: #1976D2;
+  }
+  
+  .create-product-btn {
+    background: #FF9800;
+  }
+  
+  .create-product-btn:hover {
+    background: #F57C00;
+  }
+  
+  .add-to-cart-btn {
+    background: #4CAF50;
   }
   
   .add-to-cart-btn:hover:not(:disabled) {
@@ -272,102 +331,47 @@
   const priceDisplay = document.getElementById('price-display');
   const priceValue = document.getElementById('price-value');
   const priceDetails = document.getElementById('price-details');
+  
+  const calculateBtn = document.getElementById('calculate-price-btn');
+  const createProductBtn = document.getElementById('create-product-btn');
   const addToCartBtn = document.getElementById('add-to-cart-btn');
+  
   const errorMessage = document.getElementById('error-message');
   const successMessage = document.getElementById('success-message');
+  const infoMessage = document.getElementById('info-message');
   
-  let debounceTimer;
+  let createdProduct = null; // Oluşturulan ürün bilgisi
   
-  // Dinamik fiyat hesaplama
-  function calculatePrice() {
-    clearTimeout(debounceTimer);
-    
-    debounceTimer = setTimeout(async () => {
-      const height = parseInt(heightInput.value);
-      const width = parseInt(widthInput.value);
-      const material = materialSelect.value;
-      
-      // Validasyon
-      if (!height || !width || !material) {
-        priceDisplay.style.display = 'none';
-        addToCartBtn.disabled = true;
-        return;
-      }
-      
-      if (height < 100 || height > 5000 || width < 100 || width > 5000) {
-        showError('Boy ve En 100mm ile 5000mm arasında olmalıdır');
-        priceDisplay.style.display = 'none';
-        addToCartBtn.disabled = true;
-        return;
-      }
-      
-      try {
-        // API'den fiyat hesapla
-        const formData = new FormData();
-        formData.append('height', height);
-        formData.append('width', width);
-        formData.append('material', material);
-        
-        const response = await fetch('/api/calculate-price', {
-          method: 'POST',
-          body: formData
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-          // Fiyatı göster
-          priceValue.textContent = data.calculation.formatted;
-          priceDetails.innerHTML = `
-            Alan: ${data.calculation.area.toLocaleString()} mm² • 
-            Katsayı: ${data.calculation.coefficient} • 
-            Materyal: ${data.calculation.material}
-          `;
-          priceDisplay.style.display = 'block';
-          addToCartBtn.disabled = false;
-          hideError();
-        } else {
-          showError(data.error);
-          priceDisplay.style.display = 'none';
-          addToCartBtn.disabled = true;
-        }
-      } catch (error) {
-        console.error('Fiyat hesaplama hatası:', error);
-        showError('Fiyat hesaplanamadı');
-        priceDisplay.style.display = 'none';
-        addToCartBtn.disabled = true;
-      }
-    }, 500); // 500ms debounce
-  }
-  
-  // Input değişikliklerini dinle
-  heightInput.addEventListener('input', calculatePrice);
-  widthInput.addEventListener('input', calculatePrice);
-  materialSelect.addEventListener('change', calculatePrice);
-  
-  // Form submit - sepete ekle
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
+  // 1. ADIM: Fiyat Hesapla
+  calculateBtn.addEventListener('click', async () => {
     const height = parseInt(heightInput.value);
     const width = parseInt(widthInput.value);
     const material = materialSelect.value;
     
-    // Loading durumu
-    addToCartBtn.disabled = true;
-    addToCartBtn.querySelector('.btn-text').style.display = 'none';
-    addToCartBtn.querySelector('.btn-loader').style.display = 'flex';
+    // Validasyon
+    if (!height || !width || !material) {
+      showError('Lütfen tüm alanları doldurun');
+      return;
+    }
+    
+    if (height < 100 || height > 5000 || width < 100 || width > 5000) {
+      showError('Boy ve En 100mm ile 5000mm arasında olmalıdır');
+      return;
+    }
+    
+    calculateBtn.disabled = true;
+    calculateBtn.textContent = 'Hesaplanıyor...';
     hideError();
     hideSuccess();
+    hideInfo();
     
     try {
-      // Geçici ürün oluştur
       const formData = new FormData();
       formData.append('height', height);
       formData.append('width', width);
       formData.append('material', material);
       
-      const response = await fetch('/api/create-temp-product', {
+      const response = await fetch('/apps/proxy/calculate-price', {
         method: 'POST',
         body: formData
       });
@@ -375,40 +379,146 @@
       const data = await response.json();
       
       if (data.success) {
-        // Sepete ekle (Shopify Cart API kullan)
-        const cartResponse = await fetch('/cart/add.js', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            id: data.product.variantId,
-            quantity: 1,
-            properties: {
-              'Boy': `${height}mm`,
-              'En': `${width}mm`,
-              'Materyal': data.product.material
-            }
-          })
-        });
-        
-        if (cartResponse.ok) {
-          showSuccess();
-          // 2 saniye sonra sepete yönlendir
-          setTimeout(() => {
-            window.location.href = '/cart';
-          }, 2000);
-        } else {
-          throw new Error('Sepete eklenemedi');
-        }
+        priceValue.textContent = data.calculation.formatted;
+        priceDetails.innerHTML = `
+          Alan: ${data.calculation.area.toLocaleString()} mm² • 
+          Katsayı: ${data.calculation.coefficient} • 
+          Materyal: ${data.calculation.material}
+        `;
+        priceDisplay.style.display = 'block';
+        createProductBtn.style.display = 'block';
+        hideError();
       } else {
         showError(data.error);
       }
     } catch (error) {
-      console.error('Sepete ekleme hatası:', error);
-      showError('Ürün sepete eklenemedi. Lütfen tekrar deneyin.');
+      console.error('[ERROR] Fiyat hesaplama:', error);
+      showError('Fiyat hesaplanamadı');
     } finally {
-      // Loading durumunu kaldır
+      calculateBtn.disabled = false;
+      calculateBtn.textContent = 'Fiyat Hesapla';
+    }
+  });
+  
+  // 2. ADIM: Ürün Oluştur
+  createProductBtn.addEventListener('click', async () => {
+    const height = parseInt(heightInput.value);
+    const width = parseInt(widthInput.value);
+    const material = materialSelect.value;
+    
+    createProductBtn.disabled = true;
+    createProductBtn.querySelector('.btn-text').style.display = 'none';
+    createProductBtn.querySelector('.btn-loader').style.display = 'flex';
+    hideError();
+    hideSuccess();
+    hideInfo();
+    
+    try {
+      const formData = new FormData();
+      formData.append('height', height);
+      formData.append('width', width);
+      formData.append('material', material);
+      
+      const response = await fetch('/apps/proxy/create-temp-product', {
+        method: 'POST',
+        body: formData
+      });
+      
+      const data = await response.json();
+      console.log('[DEBUG] Backend response:', data);
+      
+      if (data.success && data.product) {
+        createdProduct = data.product;
+        console.log('[SUCCESS] Product created:', createdProduct);
+        
+        // Ürün oluşturuldu mesajı göster
+        createProductBtn.style.display = 'none';
+        addToCartBtn.style.display = 'block';
+        addToCartBtn.disabled = true;
+        
+        // 5 saniye geri sayım (Ürün publish edildiği için kısa sürede hazır)
+        let countdown = 5;
+        showInfo(`✓ Ürün oluşturuldu ve yayınlandı! Sepete eklemek için ${countdown} saniye bekleyin...`);
+        
+        const countdownInterval = setInterval(() => {
+          countdown--;
+          if (countdown > 0) {
+            showInfo(`✓ Ürün oluşturuldu ve yayınlandı! Sepete eklemek için ${countdown} saniye bekleyin...`);
+          } else {
+            clearInterval(countdownInterval);
+            addToCartBtn.disabled = false;
+            showInfo(`✓ Ürün hazır! Şimdi "Sepete Ekle" butonuna tıklayabilirsiniz.`);
+          }
+        }, 1000);
+      } else {
+        showError(data.error || 'Ürün oluşturulamadı');
+      }
+    } catch (error) {
+      console.error('[ERROR] Ürün oluşturma:', error);
+      showError('Ürün oluşturulamadı');
+    } finally {
+      createProductBtn.disabled = false;
+      createProductBtn.querySelector('.btn-text').style.display = 'inline';
+      createProductBtn.querySelector('.btn-loader').style.display = 'none';
+    }
+  });
+  
+  // 3. ADIM: Sepete Ekle
+  addToCartBtn.addEventListener('click', async () => {
+    if (!createdProduct) {
+      showError('Önce ürün oluşturmalısınız');
+      return;
+    }
+    
+    addToCartBtn.disabled = true;
+    addToCartBtn.querySelector('.btn-text').style.display = 'none';
+    addToCartBtn.querySelector('.btn-loader').style.display = 'flex';
+    hideError();
+    hideSuccess();
+    hideInfo();
+    
+    try {
+      console.log('[INFO] Adding to cart, variant ID:', createdProduct.variantId);
+      
+      const cartResponse = await fetch('/cart/add.js', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          id: createdProduct.variantId,
+          quantity: 1,
+          properties: {
+            'Boyut': `${createdProduct.height}×${createdProduct.width}mm`,
+            'Materyal': createdProduct.material,
+            'Özel Fiyat': `${createdProduct.price} TL`
+          }
+        })
+      });
+      
+      if (cartResponse.ok) {
+        const cartData = await cartResponse.json();
+        console.log('[SUCCESS] Added to cart:', cartData);
+        showSuccess('✓ Ürün sepete eklendi!');
+        
+        // Formu sıfırla
+        setTimeout(() => {
+          resetForm();
+        }, 2000);
+      } else {
+        const errorData = await cartResponse.json().catch(() => ({}));
+        console.warn('[WARNING] Cart add failed:', errorData);
+        
+        if (errorData.description === 'Cannot find variant') {
+          showError('⏳ Ürün hala hazırlanıyor. Lütfen 20-30 saniye daha bekleyip tekrar "Sepete Ekle" butonuna tıklayın. (Shopify\'ın indexing süreci uzun sürebilir)');
+        } else {
+          showError('Sepete eklenemedi. Lütfen tekrar deneyin.');
+        }
+      }
+    } catch (error) {
+      console.error('[ERROR] Cart add:', error);
+      showError('Sepete eklenemedi. Lütfen tekrar deneyin.');
+    } finally {
       addToCartBtn.disabled = false;
       addToCartBtn.querySelector('.btn-text').style.display = 'inline';
       addToCartBtn.querySelector('.btn-loader').style.display = 'none';
@@ -425,16 +535,40 @@
     errorMessage.style.display = 'none';
   }
   
-  function showSuccess() {
+  function showSuccess(message) {
+    if (message) {
+      successMessage.textContent = message;
+    }
     successMessage.style.display = 'block';
   }
   
   function hideSuccess() {
     successMessage.style.display = 'none';
   }
+  
+  function showInfo(message) {
+    infoMessage.textContent = message;
+    infoMessage.style.display = 'block';
+  }
+  
+  function hideInfo() {
+    infoMessage.style.display = 'none';
+  }
+  
+  function resetForm() {
+    heightInput.value = '';
+    widthInput.value = '';
+    materialSelect.value = '';
+    priceDisplay.style.display = 'none';
+    createProductBtn.style.display = 'none';
+    addToCartBtn.style.display = 'none';
+    createdProduct = null;
+    hideError();
+    hideSuccess();
+    hideInfo();
+  }
 })();
 </script>
-
 {% schema %}
 {
   "name": "Dinamik Fiyat Hesaplayıcı",

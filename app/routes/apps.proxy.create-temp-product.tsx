@@ -1,0 +1,135 @@
+/**
+ * Shopify App Proxy Route: Geçici Ürün Oluşturma
+ * 
+ * Storefront'tan erişilebilir endpoint (Shopify App Proxy ile)
+ * URL: https://[store].myshopify.com/apps/[proxy-path]/create-temp-product
+ */
+
+import { json } from "@remix-run/node";
+import type { ActionFunctionArgs } from "@remix-run/node";
+import { authenticate } from "../shopify.server";
+import db from "../db.server";
+import {
+  calculatePrice,
+  validateInputs,
+  MATERIAL_NAMES,
+  type MaterialType
+} from "../utils/pricing.server";
+import {
+  createTempProduct,
+  type TempProductData
+} from "../utils/product.server";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+};
+
+export async function action({ request }: ActionFunctionArgs) {
+  if (request.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: corsHeaders });
+  }
+
+  if (request.method !== "POST") {
+    return json({ error: "Method not allowed" }, { status: 405, headers: corsHeaders });
+  }
+  
+  try {
+    // Shopify authentication
+    const { admin, session } = await authenticate.public.appProxy(request);
+    
+    if (!session) {
+      return json(
+        { success: false, error: "Authentication required" },
+        { status: 401, headers: corsHeaders }
+      );
+    }
+
+    const formData = await request.formData();
+    const height = parseInt(formData.get("height") as string);
+    const width = parseInt(formData.get("width") as string);
+    const material = formData.get("material") as string;
+    
+    // Validasyon
+    const errors = validateInputs(height, width, material);
+    if (errors.length > 0) {
+      return json(
+        { success: false, error: errors.join(", ") },
+        { status: 400, headers: corsHeaders }
+      );
+    }
+    
+    // Fiyat hesapla
+    const price = calculatePrice(height, width, material as MaterialType);
+    const materialName = MATERIAL_NAMES[material as MaterialType];
+    
+    // Shopify'da geçici ürün oluştur
+    const productData: TempProductData = {
+      height,
+      width,
+      material,
+      materialName,
+      price
+    };
+    
+    const { productId, variantId, title } = await createTempProduct(
+      admin,
+      productData
+    );
+    
+    // Veritabanına kaydet (2 saat sonra silinmek üzere)
+    const now = new Date();
+    const deleteAt = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+    
+    const tempProduct = await db.tempProduct.create({
+      data: {
+        shop: session.shop,
+        productId,
+        variantId,
+        height,
+        width,
+        material,
+        price,
+        deleteAt
+      }
+    });
+    
+    console.log(`[ProxyTempProduct] Oluşturuldu: ${productId} - ${title}`);
+    
+    return json(
+      {
+        success: true,
+        product: {
+          id: tempProduct.id,
+          productId,
+          variantId,
+          title,
+          price,
+          height,
+          width,
+          material: materialName
+        }
+      },
+      { headers: corsHeaders }
+    );
+    
+  } catch (error) {
+    console.error("[ProxyTempProduct] Hata:", error);
+    
+    return json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : "Ürün oluşturulamadı"
+      },
+      { status: 500, headers: corsHeaders }
+    );
+  }
+}
+
+export const loader = async () => {
+  return json(
+    { error: "POST request gerekli" },
+    { status: 405, headers: corsHeaders }
+  );
+};

@@ -19,6 +19,80 @@ type AdminContext = {
 };
 
 /**
+ * Draft Order oluşturur ve checkout URL döndürür
+ * Custom price için en güvenilir yöntem!
+ */
+export async function createDraftOrder(
+  admin: AdminContext,
+  data: TempProductData,
+  shopDomain: string
+) {
+  const { height, width, material, materialName, price } = data;
+  
+  const title = `Özel Çerçeve ${height}×${width}mm - ${materialName}`;
+  
+  // Draft Order mutation
+  const CREATE_DRAFT_ORDER = `
+    mutation draftOrderCreate($input: DraftOrderInput!) {
+      draftOrderCreate(input: $input) {
+        draftOrder {
+          id
+          invoiceUrl
+          totalPrice
+        }
+        userErrors {
+          field
+          message
+        }
+      }
+    }
+  `;
+  
+  const response = await admin.graphql(CREATE_DRAFT_ORDER, {
+    variables: {
+      input: {
+        lineItems: [
+          {
+            title: title,
+            originalUnitPrice: price.toFixed(2),
+            quantity: 1,
+            customAttributes: [
+              { key: "Boy", value: `${height}mm` },
+              { key: "En", value: `${width}mm` },
+              { key: "Materyal", value: materialName }
+            ]
+          }
+        ],
+        note: `Dinamik fiyat: ${height}×${width}mm, ${materialName}`,
+        tags: ["dynamic-price", `material-${material}`]
+      }
+    }
+  });
+  
+  const result = await response.json();
+  
+  console.log(`[DraftOrder Debug]`, JSON.stringify(result, null, 2));
+  
+  if (result.data?.draftOrderCreate?.userErrors?.length > 0) {
+    const errors = result.data.draftOrderCreate.userErrors;
+    throw new Error(
+      `Draft Order hatası: ${errors.map((e: any) => `${e.field}: ${e.message}`).join(', ')}`
+    );
+  }
+  
+  const draftOrder = result.data.draftOrderCreate.draftOrder;
+  const draftOrderId = draftOrder.id.split('/').pop();
+  
+  console.log(`[DraftOrder Success] ID: ${draftOrderId}, Total: ${draftOrder.totalPrice}`);
+  
+  return {
+    draftOrderId,
+    checkoutUrl: draftOrder.invoiceUrl,
+    totalPrice: parseFloat(draftOrder.totalPrice)
+  };
+}
+
+/**
  * Shopify'da geçici ürün oluşturur
  * @param admin Shopify Admin API context
  * @param data Ürün bilgileri
@@ -45,32 +119,67 @@ export async function createTempProduct(
     <p><em>Not: Bu ürün özel siparişiniz için oluşturulmuştur.</em></p>
   `;
   
-  // GraphQL mutation
-  const CREATE_PRODUCT_MUTATION = `
-    mutation createProduct($input: ProductInput!) {
-      productCreate(input: $input) {
+  // Önce Online Store publication ID'sini bul
+  console.log('[Info] Fetching publications...');
+  
+  const PUBLICATIONS_QUERY = `
+    query {
+      publications(first: 10) {
+        edges {
+          node {
+            id
+            name
+          }
+        }
+      }
+    }
+  `;
+  
+  const pubsResponse = await admin.graphql(PUBLICATIONS_QUERY);
+  const pubsResult = await pubsResponse.json();
+  
+  console.log('[Publications] Available:', JSON.stringify(pubsResult.data?.publications?.edges, null, 2));
+  
+  // Online Store publication ID'sini bul
+  const publications = pubsResult.data?.publications?.edges || [];
+  const onlineStore = publications.find((edge: any) => edge.node.name === "Online Store");
+  
+  if (!onlineStore) {
+    console.error('[Error] Online Store publication not found!');
+    throw new Error("Online Store publication not found");
+  }
+  
+  const onlineStoreId = onlineStore.node.id;
+  console.log('[Info] Using Online Store publication:', onlineStoreId);
+  
+  // productSet mutation ile ürünü oluştur
+  const PRODUCT_SET_MUTATION = `
+    mutation productSet($input: ProductSetInput!, $synchronous: Boolean!) {
+      productSet(input: $input, synchronous: $synchronous) {
         product {
           id
           title
+          handle
+          onlineStoreUrl
           variants(first: 1) {
-            edges {
-              node {
-                id
-                price
-              }
+            nodes {
+              id
+              price
             }
           }
         }
         userErrors {
           field
           message
+          code
         }
       }
     }
   `;
   
-  const response = await admin.graphql(CREATE_PRODUCT_MUTATION, {
+  const createResponse = await admin.graphql(PRODUCT_SET_MUTATION, {
     variables: {
+      synchronous: true,
       input: {
         title,
         descriptionHtml,
@@ -78,33 +187,114 @@ export async function createTempProduct(
         vendor: "Dinamik Fiyat Sistemi",
         tags: ["temp-product", "auto-delete", `material-${material}`],
         status: "ACTIVE",
+        productOptions: [
+          {
+            name: "Özelleştirme",
+            values: [
+              {
+                name: `${height}×${width}mm ${materialName}`
+              }
+            ]
+          }
+        ],
         variants: [
           {
-            price: price.toString(),
+            optionValues: [
+              {
+                optionName: "Özelleştirme",
+                name: `${height}×${width}mm ${materialName}`
+              }
+            ],
+            price: price.toFixed(2),
             inventoryPolicy: "CONTINUE",
-            inventoryManagement: null,
-            requiresShipping: true
+            inventoryItem: {
+              tracked: false
+            }
           }
         ]
       }
     }
   });
   
-  const result = await response.json();
+  const createResult = await createResponse.json();
   
-  if (result.data?.productCreate?.userErrors?.length > 0) {
+  // Debug: Full response'u logla
+  console.log(`[ProductSet Debug] Response:`, JSON.stringify(createResult, null, 2));
+  
+  if (createResult.data?.productSet?.userErrors?.length > 0) {
+    const errors = createResult.data.productSet.userErrors;
+    console.error(`[ProductSet Error] UserErrors:`, errors);
     throw new Error(
-      `Ürün oluşturma hatası: ${result.data.productCreate.userErrors[0].message}`
+      `Ürün oluşturma hatası: ${errors.map((e: any) => `${e.field}: ${e.message} (${e.code})`).join(', ')}`
     );
   }
   
-  const product = result.data.productCreate.product;
-  const variant = product.variants.edges[0].node;
+  if (!createResult.data?.productSet?.product) {
+    console.error(`[ProductSet Error] No product in response:`, createResult);
+    throw new Error("Ürün oluşturulamadı - response'da product yok");
+  }
+  
+  const product = createResult.data.productSet.product;
+  const variant = product.variants.nodes[0];
+  const variantIdNumber = variant.id.split('/').pop() || "";
+  const variantPrice = variant.price || "0";
+  
+  console.log(`[ProductSet Success] Product: ${product.id}, Variant: ${variant.id}, Price: ${variantPrice}`);
+  
+  if (parseFloat(variantPrice) === 0) {
+    console.warn(`[Warning] Variant price is 0 - expected ${price.toFixed(2)}`);
+  } else {
+    console.log(`[Success] Variant price set to: ${variantPrice} TL`);
+  }
+  
+  console.log(`[Success] ✅ Product created`);
+
+  // Ürünü Online Store'da LISTED olarak yayınla
+  const PUBLISH_MUTATION = `
+    mutation PublishProductToOnlineStore($id: ID!, $publicationId: ID!) {
+      publishablePublish(id: $id, input: [{ publicationId: $publicationId }]) {
+        publishable {
+          ... on Product {
+            id
+            title
+            onlineStoreUrl
+            status
+          }
+        }
+        userErrors { field message }
+      }
+    }
+  `;
+
+  const publishResp = await admin.graphql(PUBLISH_MUTATION, {
+    variables: {
+      id: product.id,
+      publicationId: onlineStoreId
+    }
+  });
+  const publishResult = await publishResp.json();
+  console.log(`[Publish Debug]`, JSON.stringify(publishResult, null, 2));
+
+  const pubErrors = publishResult.data?.publishablePublish?.userErrors || [];
+  if (pubErrors.length > 0) {
+    throw new Error(`Yayınlama hatası: ${pubErrors.map((e: any) => `${e.field}: ${e.message}`).join(', ')}`);
+  }
+
+  const publishedProduct = publishResult.data?.publishablePublish?.publishable;
+  if (!publishedProduct) {
+    console.warn(`[Publish Warning] publishablePublish sonucu beklenen ürünü döndürmedi.`);
+  } else {
+    console.log(`[Publish Success] ✅ Product published to Online Store (LISTED)`);
+  }
   
   return {
     productId: product.id.split('/').pop() || "",
-    variantId: variant.id.split('/').pop() || "",
-    title: product.title
+    variantId: variantIdNumber,
+    title: product.title,
+    handle: product.handle,
+    // publishablePublish dönüşündeki URL’yi tercih et, yoksa productSet’ten geleni kullan
+    onlineStoreUrl: publishedProduct?.onlineStoreUrl || product.onlineStoreUrl,
+    price: price
   };
 }
 
