@@ -21,7 +21,12 @@ api_version = "2026-01"
 scopes = "write_products,read_products,read_themes,write_draft_orders"
 
 [auth]
-redirect_urls = [ "https://example.com/api/auth" ]
+redirect_urls = [
+  "https://example.com/api/auth",
+  "http://localhost/api/auth",
+  "http://127.0.0.1/api/auth"
+]
 
 [build]
 automatically_update_urls_on_dev = true
+dev_store_url = "remixapp-2.myshopify.com"
