@@ -220,7 +220,7 @@ $headers = @{
     "X-Cron-Secret" = "change-me-in-production-to-secure-random-token"
 }
 Invoke-RestMethod -Uri "http://localhost:5173/api/cleanup-temp-products" -Method POST -Headers $headers
-```
+``` 
 
 ## 📞 İletişim
 
