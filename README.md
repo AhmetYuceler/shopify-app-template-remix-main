@@ -1,6 +1,6 @@
 # 🎯 Gifler ile projenin özeti
 
-https://hizliresim.com/spwt1qu
+https://i.hizliresim.com/jmvu103.gif
 
 # 🎯 Dinamik Fiyat Hesaplama Uygulaması
 
