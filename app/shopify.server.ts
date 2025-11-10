@@ -7,12 +7,37 @@ import {
 import { PrismaSessionStorage } from "@shopify/shopify-app-session-storage-prisma";
 import prisma from "./db.server";
 
+// Derive appUrl from multiple environment variables so deployments don't crash
+// if SHOPIFY_APP_URL isn't explicitly set at runtime.
+function deriveAppUrl() {
+  const candidates = [
+    process.env.SHOPIFY_APP_URL,
+    process.env.APP_URL,
+    // Common PaaS envs
+    process.env.RENDER_EXTERNAL_URL,
+    process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined,
+    process.env.RAILWAY_PUBLIC_DOMAIN
+      ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
+      : undefined,
+    process.env.RAILWAY_STATIC_URL,
+  ].filter(Boolean) as string[];
+
+  let url = candidates[0] || "";
+
+  // Normalize: ensure protocol and no trailing slash
+  if (url && !/^https?:\/\//i.test(url)) {
+    url = `https://${url}`;
+  }
+  url = url.replace(/\/$/, "");
+  return url;
+}
+
 const shopify = shopifyApp({
   apiKey: process.env.SHOPIFY_API_KEY,
   apiSecretKey: process.env.SHOPIFY_API_SECRET || "",
   apiVersion: ApiVersion.January25,
   scopes: process.env.SCOPES?.split(","),
-  appUrl: process.env.SHOPIFY_APP_URL || "",
+  appUrl: deriveAppUrl(),
   authPathPrefix: "/auth",
   sessionStorage: new PrismaSessionStorage(prisma),
   distribution: AppDistribution.AppStore,
