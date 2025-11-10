@@ -1,3 +1,4 @@
+# Cache buster: 2025-11-10-07:20
 FROM node:18-alpine
 RUN apk add --no-cache openssl
 
