@@ -2,7 +2,7 @@
 
 client_id = "e213ff3aa620fe7c451ff52ce9b26c41"
 name = "rmx-yuceler"
-application_url = "https://example.com"
+application_url = "https://web-production-e05ff.up.railway.app"
 embedded = true
 
 [webhooks]
@@ -22,7 +22,7 @@ scopes = "write_products,read_products,read_themes,write_draft_orders,write_publ
 
 [auth]
 redirect_urls = [
-  "https://example.com/api/auth",
+  "https://web-production-e05ff.up.railway.app/api/auth",
   "http://localhost/api/auth",
   "http://127.0.0.1/api/auth"
 ]
@@ -32,6 +32,6 @@ automatically_update_urls_on_dev = true
 dev_store_url = "remixapp-2.myshopify.com"
 
 [app_proxy]
-url = "https://example.com"
+url = "https://web-production-e05ff.up.railway.app"
 subpath = "proxy"
 prefix = "apps"
