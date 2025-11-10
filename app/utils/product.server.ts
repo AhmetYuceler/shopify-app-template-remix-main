@@ -205,17 +205,26 @@ export async function createTempProduct(
   };
   
   // Add product image if available
-  if (imageUrl && imageUrl.startsWith('http')) {
-    console.log(`[ProductSet] Adding image: ${imageUrl}`);
-    productInput.media = [
-      {
-        originalSource: imageUrl,
-        mediaContentType: "IMAGE",
-        alt: title
-      }
-    ];
-  } else if (imageUrl) {
-    console.warn(`[ProductSet] Invalid image URL format: ${imageUrl}`);
+  if (imageUrl && imageUrl.trim()) {
+    // Ensure URL has protocol
+    let fullImageUrl = imageUrl.trim();
+    if (fullImageUrl.startsWith('//')) {
+      fullImageUrl = 'https:' + fullImageUrl;
+    } else if (!fullImageUrl.startsWith('http://') && !fullImageUrl.startsWith('https://')) {
+      console.warn(`[ProductSet] Invalid image URL format: ${imageUrl}`);
+      fullImageUrl = '';
+    }
+    
+    if (fullImageUrl) {
+      console.log(`[ProductSet] Adding image: ${fullImageUrl}`);
+      productInput.media = [
+        {
+          originalSource: fullImageUrl,
+          mediaContentType: "IMAGE",
+          alt: title
+        }
+      ];
+    }
   }
   
   const createResponse = await admin.graphql(PRODUCT_SET_MUTATION, {
