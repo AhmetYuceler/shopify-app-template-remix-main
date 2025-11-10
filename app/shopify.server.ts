@@ -63,16 +63,27 @@ if (!resolvedApiKey || !resolvedApiSecret) {
   const missing: string[] = [];
   if (!resolvedApiKey) missing.push("SHOPIFY_API_KEY (or SHOPIFY_PUBLIC_API_KEY)");
   if (!resolvedApiSecret) missing.push("SHOPIFY_API_SECRET_KEY (or SHOPIFY_API_SECRET / SHOPIFY_SECRET)");
-  // Log presence without leaking sensitive values
+  
   // eslint-disable-next-line no-console
-  console.error(
-    `[shopify-app] Missing required env vars: ${missing.join(", ")}. Present? ` +
-      `apiKey=${!!process.env.SHOPIFY_API_KEY || !!process.env.SHOPIFY_PUBLIC_API_KEY}, ` +
-      `apiSecret=${!!process.env.SHOPIFY_API_SECRET_KEY || !!(process.env as any).SHOPIFY_API_SECRET || !!(process.env as any).SHOPIFY_SECRET}`
-  );
+  console.error(`[shopify-app] ❌ Missing required env vars: ${missing.join(", ")}`);
+  // eslint-disable-next-line no-console
+  console.error(`[shopify-app] Present? apiKey=${!!process.env.SHOPIFY_API_KEY || !!process.env.SHOPIFY_PUBLIC_API_KEY}, apiSecret=${!!process.env.SHOPIFY_API_SECRET_KEY || !!(process.env as any).SHOPIFY_API_SECRET}`);
+  
+  // Diagnostic: log all available env var names (no values) to help debug Railway
+  const allKeys = Object.keys(process.env).sort();
+  // eslint-disable-next-line no-console
+  console.error(`[shopify-app] 🔍 All available env var names (${allKeys.length}):`, allKeys.join(", "));
+  
   throw new Error(
-    `Missing required environment variables: ${missing.join(", ")}. ` +
-      `Set these in your deployment environment (e.g., Railway Variables).`
+    `❌ Missing required environment variables: ${missing.join(", ")}.\n\n` +
+    `📋 Railway users: Go to your Service → Variables tab and add:\n` +
+    `   • SHOPIFY_API_KEY = <your-api-key>\n` +
+    `   • SHOPIFY_API_SECRET_KEY = <your-api-secret>\n` +
+    `   • HOST = \${{RAILWAY_PUBLIC_DOMAIN}}\n` +
+    `   • SHOPIFY_APP_URL = https://<your-railway-domain>\n` +
+    `   • SCOPES = write_products,read_products,...\n\n` +
+    `Then redeploy. DO NOT rely on .env file in Railway; use Service Variables.\n\n` +
+    `🔍 Debug: Check the log above for "All available env var names" to see what Railway is actually injecting.`
   );
 }
 
