@@ -14,9 +14,10 @@ database.sqlite
 .env
 .env.*
 
-package-lock.json
-yarn.lock
-pnpm-lock.yaml
+# Lock files are needed for Docker builds in production
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
 
 /extensions/*/dist
 
