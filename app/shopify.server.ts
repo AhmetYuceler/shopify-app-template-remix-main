@@ -32,9 +32,38 @@ function deriveAppUrl() {
   return url;
 }
 
+// Normalize and validate critical env vars with fallbacks to avoid misconfigurations
+const resolvedApiKey =
+  process.env.SHOPIFY_API_KEY ||
+  process.env.SHOPIFY_PUBLIC_API_KEY ||
+  "";
+
+const resolvedApiSecret =
+  process.env.SHOPIFY_API_SECRET_KEY ||
+  (process.env as any).SHOPIFY_API_SECRET ||
+  (process.env as any).SHOPIFY_SECRET ||
+  "";
+
+if (!resolvedApiKey || !resolvedApiSecret) {
+  const missing: string[] = [];
+  if (!resolvedApiKey) missing.push("SHOPIFY_API_KEY (or SHOPIFY_PUBLIC_API_KEY)");
+  if (!resolvedApiSecret) missing.push("SHOPIFY_API_SECRET_KEY (or SHOPIFY_API_SECRET / SHOPIFY_SECRET)");
+  // Log presence without leaking sensitive values
+  // eslint-disable-next-line no-console
+  console.error(
+    `[shopify-app] Missing required env vars: ${missing.join(", ")}. Present? ` +
+      `apiKey=${!!process.env.SHOPIFY_API_KEY || !!process.env.SHOPIFY_PUBLIC_API_KEY}, ` +
+      `apiSecret=${!!process.env.SHOPIFY_API_SECRET_KEY || !!(process.env as any).SHOPIFY_API_SECRET || !!(process.env as any).SHOPIFY_SECRET}`
+  );
+  throw new Error(
+    `Missing required environment variables: ${missing.join(", ")}. ` +
+      `Set these in your deployment environment (e.g., Railway Variables).`
+  );
+}
+
 const shopify = shopifyApp({
-  apiKey: process.env.SHOPIFY_API_KEY,
-  apiSecretKey: process.env.SHOPIFY_API_SECRET_KEY || "",
+  apiKey: resolvedApiKey,
+  apiSecretKey: resolvedApiSecret,
   apiVersion: ApiVersion.January25,
   scopes: process.env.SCOPES?.split(","),
   appUrl: deriveAppUrl(),
