@@ -55,8 +55,9 @@ export async function action({ request }: ActionFunctionArgs) {
     const height = parseInt(formData.get("height") as string);
     const width = parseInt(formData.get("width") as string);
     const material = formData.get("material") as string;
+    const imageUrl = formData.get("imageUrl") as string || "";
     
-    console.log(`[AppProxy] Geçici ürün oluştur: height=${height}, width=${width}, material=${material}, shop=${session.shop}`);
+    console.log(`[AppProxy] Geçici ürün oluştur: height=${height}, width=${width}, material=${material}, imageUrl=${imageUrl}, shop=${session.shop}`);
     
     // Validasyon
     const errors = validateInputs(height, width, material);
@@ -77,7 +78,8 @@ export async function action({ request }: ActionFunctionArgs) {
       width,
       material,
       materialName,
-      price
+      price,
+      imageUrl: imageUrl || undefined
     };
     
     const { productId, variantId, title } = await createTempProduct(

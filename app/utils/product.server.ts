@@ -169,52 +169,59 @@ export async function createTempProduct(
     }
   `;
   
-  const createResponse = await admin.graphql(PRODUCT_SET_MUTATION, {
-    variables: {
-      synchronous: true,
-      input: {
-        title,
-        descriptionHtml,
-        productType: "Temporary Product",
-        vendor: "Dynamic Price System",
-        tags: ["temp-product", "temp-hidden", "auto-delete", `material-${material}`],
-        status: "ACTIVE",
-        // Add product image (if available)
-        ...(imageUrl ? {
-          media: [
-            {
-              originalSource: imageUrl,
-              mediaContentType: "IMAGE"
-            }
-          ]
-        } : {}),
-        // Note: Publishing will be done with publishablePublish
-        productOptions: [
+  // Build product input
+  const productInput: any = {
+    title,
+    descriptionHtml,
+    productType: "Temporary Product",
+    vendor: "Dynamic Price System",
+    tags: ["temp-product", "temp-hidden", "auto-delete", `material-${material}`],
+    status: "ACTIVE",
+    productOptions: [
+      {
+        name: "Customization",
+        values: [
           {
-            name: "Customization",
-            values: [
-              {
-                name: `${height}×${width}mm ${materialName}`
-              }
-            ]
-          }
-        ],
-        variants: [
-          {
-            optionValues: [
-              {
-                optionName: "Customization",
-                name: `${height}×${width}mm ${materialName}`
-              }
-            ],
-            price: price.toFixed(2),
-            inventoryPolicy: "CONTINUE",
-            inventoryItem: {
-              tracked: false
-            }
+            name: `${height}×${width}mm ${materialName}`
           }
         ]
       }
+    ],
+    variants: [
+      {
+        optionValues: [
+          {
+            optionName: "Customization",
+            name: `${height}×${width}mm ${materialName}`
+          }
+        ],
+        price: price.toFixed(2),
+        inventoryPolicy: "CONTINUE",
+        inventoryItem: {
+          tracked: false
+        }
+      }
+    ]
+  };
+  
+  // Add product image if available
+  if (imageUrl && imageUrl.startsWith('http')) {
+    console.log(`[ProductSet] Adding image: ${imageUrl}`);
+    productInput.media = [
+      {
+        originalSource: imageUrl,
+        mediaContentType: "IMAGE",
+        alt: title
+      }
+    ];
+  } else if (imageUrl) {
+    console.warn(`[ProductSet] Invalid image URL format: ${imageUrl}`);
+  }
+  
+  const createResponse = await admin.graphql(PRODUCT_SET_MUTATION, {
+    variables: {
+      synchronous: true,
+      input: productInput
     }
   });
   
