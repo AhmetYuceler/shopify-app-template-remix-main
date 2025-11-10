@@ -34,7 +34,7 @@ function deriveAppUrl() {
 
 const shopify = shopifyApp({
   apiKey: process.env.SHOPIFY_API_KEY,
-  apiSecretKey: process.env.SHOPIFY_API_SECRET || "",
+  apiSecretKey: process.env.SHOPIFY_API_SECRET_KEY || "",
   apiVersion: ApiVersion.January25,
   scopes: process.env.SCOPES?.split(","),
   appUrl: deriveAppUrl(),

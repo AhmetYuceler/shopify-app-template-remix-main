@@ -51,7 +51,7 @@ Write-Host "  https://railway.app/dashboard" -ForegroundColor White
 Write-Host ""
 Write-Host "Variables needed:" -ForegroundColor Yellow
 Write-Host "  SHOPIFY_API_KEY=$env:SHOPIFY_API_KEY" -ForegroundColor White
-Write-Host "  SHOPIFY_API_SECRET=$env:SHOPIFY_API_SECRET" -ForegroundColor White
+Write-Host "  SHOPIFY_API_SECRET_KEY=$env:SHOPIFY_API_SECRET_KEY" -ForegroundColor White
 Write-Host "  SCOPES=write_products,read_products,read_themes,write_draft_orders,write_publications,read_publications" -ForegroundColor White
 Write-Host "  DATABASE_URL=file:./dev.sqlite" -ForegroundColor White
 Write-Host ""

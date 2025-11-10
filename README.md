@@ -74,7 +74,7 @@ shopify-app-template-remix-main/
 
 ```env
 SHOPIFY_API_KEY=
-SHOPIFY_API_SECRET=
+SHOPIFY_API_SECRET_KEY=
 ```
 
 ### 2. Bağımlılıkları Yükleyin
