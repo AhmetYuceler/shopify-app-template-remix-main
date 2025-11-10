@@ -68,11 +68,11 @@ export async function action({ request }: ActionFunctionArgs) {
         coefficient,
         materialPrice: MATERIAL_PRICES[material as MaterialType],
         totalPrice: price,
-        formatted: `${price.toFixed(2)} TL`
+        formatted: `${price.toFixed(2)} $`
       }
     };
     
-    console.log(`[AppProxy] Fiyat hesaplandı: ${price.toFixed(2)} TL`);
+    console.log(`[AppProxy] Fiyat hesaplandı: ${price.toFixed(2)} $`);
     
     return json(result, { headers: corsHeaders });
     

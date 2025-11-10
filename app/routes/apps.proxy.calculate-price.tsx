@@ -136,7 +136,7 @@ export async function action({ request }: ActionFunctionArgs) {
           coefficient,
           materialPrice: MATERIAL_PRICES[material as MaterialType],
           totalPrice: price,
-          formatted: `${price.toFixed(2)} TL`
+          formatted: `${price.toFixed(2)} $`
         },
         product: productPayload
       },

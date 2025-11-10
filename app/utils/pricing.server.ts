@@ -7,7 +7,7 @@
  * - Toplam fiyat hesaplama
  */
 
-// Materyal fiyatları (TL)
+// Materyal fiyatları ($)
 export const MATERIAL_PRICES = {
   wood: 50,    // Ahşap
   metal: 100,  // Metal
@@ -60,7 +60,7 @@ export function getCoefficient(height: number, width: number): number {
  * @param height Boy (mm)
  * @param width En (mm)
  * @param material Materyal tipi
- * @returns Hesaplanan fiyat (TL)
+ * @returns Hesaplanan fiyat ($)
  */
 export function calculatePrice(
   height: number,
@@ -132,7 +132,7 @@ export function validateInputs(
  * @returns Formatlanmış fiyat string'i
  */
 export function formatPrice(price: number): string {
-  return `${price.toFixed(2)} TL`;
+  return `${price.toFixed(2)} $`;
 }
 
 /**

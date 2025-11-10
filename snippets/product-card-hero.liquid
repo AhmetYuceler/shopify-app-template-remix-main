@@ -158,7 +158,7 @@
             if (priceElement) {
               const formatMoney = window.Shopify && Shopify.formatMoney ?
                 function(cents) { return Shopify.formatMoney(cents, {{ shop.money_format | json }}); } :
-                function(cents) { return (cents / 100).toFixed(2) + ' TL'; };
+                function(cents) { return (cents / 100).toFixed(2) + ' $'; };
               priceElement.textContent = formatMoney(matchingVariant.price);
             }
 
@@ -167,7 +167,7 @@
               if (comparePriceElement) {
                 const formatMoney = window.Shopify && Shopify.formatMoney ?
                   function(cents) { return Shopify.formatMoney(cents, {{ shop.money_format | json }}); } :
-                  function(cents) { return (cents / 100).toFixed(2) + ' TL'; };
+                  function(cents) { return (cents / 100).toFixed(2) + ' $'; };
                 comparePriceElement.textContent = formatMoney(matchingVariant.compare_at_price);
                 comparePriceElement.style.display = 'inline';
               }

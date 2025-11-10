@@ -1,7 +1,7 @@
 /**
- * Geçici Ürün Yönetimi Fonksiyonları
+ * Temporary Product Management Functions
  * 
- * Shopify'da geçici ürün oluşturma, güncelleme ve silme işlemleri
+ * Shopify temporary product creation, update, and deletion operations
  */
 
 export interface TempProductData {
@@ -11,6 +11,7 @@ export interface TempProductData {
   materialName: string;
   price: number;
   originalProductId?: string;
+  imageUrl?: string;
 }
 
 // Admin context type (GraphQL API)
@@ -19,8 +20,8 @@ type AdminContext = {
 };
 
 /**
- * Draft Order oluşturur ve checkout URL döndürür
- * Custom price için en güvenilir yöntem!
+ * Create a Draft Order and return checkout URL
+ * Most reliable method for custom pricing!
  */
 export async function createDraftOrder(
   admin: AdminContext,
@@ -29,7 +30,7 @@ export async function createDraftOrder(
 ) {
   const { height, width, material, materialName, price } = data;
   
-  const title = `Özel Çerçeve ${height}×${width}mm - ${materialName}`;
+  const title = `Custom Frame ${height}×${width}mm - ${materialName}`;
   
   // Draft Order mutation
   const CREATE_DRAFT_ORDER = `
@@ -57,13 +58,13 @@ export async function createDraftOrder(
             originalUnitPrice: price.toFixed(2),
             quantity: 1,
             customAttributes: [
-              { key: "Boy", value: `${height}mm` },
-              { key: "En", value: `${width}mm` },
-              { key: "Materyal", value: materialName }
+              { key: "Height", value: `${height}mm` },
+              { key: "Width", value: `${width}mm` },
+              { key: "Material", value: materialName }
             ]
           }
         ],
-        note: `Dinamik fiyat: ${height}×${width}mm, ${materialName}`,
+        note: `Dynamic pricing: ${height}×${width}mm, ${materialName}`,
         tags: ["dynamic-price", `material-${material}`]
       }
     }
@@ -76,7 +77,7 @@ export async function createDraftOrder(
   if (result.data?.draftOrderCreate?.userErrors?.length > 0) {
     const errors = result.data.draftOrderCreate.userErrors;
     throw new Error(
-      `Draft Order hatası: ${errors.map((e: any) => `${e.field}: ${e.message}`).join(', ')}`
+      `Draft Order error: ${errors.map((e: any) => `${e.field}: ${e.message}`).join(', ')}`
     );
   }
   
@@ -93,30 +94,30 @@ export async function createDraftOrder(
 }
 
 /**
- * Shopify'da geçici ürün oluşturur
+ * Create a temporary product in Shopify
  * @param admin Shopify Admin API context
- * @param data Ürün bilgileri
- * @returns Oluşturulan ürün ve varyant ID'leri
+ * @param data Product information
+ * @returns Created product and variant IDs
  */
 export async function createTempProduct(
   admin: AdminContext,
   data: TempProductData
 ) {
-  const { height, width, material, materialName, price } = data;
+  const { height, width, material, materialName, price, imageUrl } = data;
   
-  // Ürün başlığı
-  const title = `Özel Çerçeve ${height}×${width}mm - ${materialName}`;
+  // Product title
+  const title = `Custom Frame ${height}×${width}mm - ${materialName}`;
   
-  // Ürün açıklaması
+  // Product description
   const descriptionHtml = `
-    <p><strong>Özelleştirilmiş Çerçeve</strong></p>
+    <p><strong>Customized Frame</strong></p>
     <ul>
-      <li>Boy: ${height}mm</li>
-      <li>En: ${width}mm</li>
-      <li>Materyal: ${materialName}</li>
-      <li>Fiyat: ${price.toFixed(2)} TL</li>
+      <li>Height: ${height}mm</li>
+      <li>Width: ${width}mm</li>
+      <li>Material: ${materialName}</li>
+      <li>Price: ${price.toFixed(2)} $</li>
     </ul>
-    <p><em>Not: Bu ürün özel siparişiniz için oluşturulmuştur.</em></p>
+    <p><em>Note: This product was created for your custom order.</em></p>
   `;
   
   // Online Store publication ID'sini bul (publishablePublish için gerekli)
@@ -174,14 +175,23 @@ export async function createTempProduct(
       input: {
         title,
         descriptionHtml,
-        productType: "Geçici Ürün",
-        vendor: "Dinamik Fiyat Sistemi",
+        productType: "Temporary Product",
+        vendor: "Dynamic Price System",
         tags: ["temp-product", "temp-hidden", "auto-delete", `material-${material}`],
         status: "ACTIVE",
-        // Not: Yayınlama publishablePublish ile yapılacak
+        // Add product image (if available)
+        ...(imageUrl ? {
+          media: [
+            {
+              originalSource: imageUrl,
+              mediaContentType: "IMAGE"
+            }
+          ]
+        } : {}),
+        // Note: Publishing will be done with publishablePublish
         productOptions: [
           {
-            name: "Özelleştirme",
+            name: "Customization",
             values: [
               {
                 name: `${height}×${width}mm ${materialName}`
@@ -193,7 +203,7 @@ export async function createTempProduct(
           {
             optionValues: [
               {
-                optionName: "Özelleştirme",
+                optionName: "Customization",
                 name: `${height}×${width}mm ${materialName}`
               }
             ],
@@ -236,7 +246,7 @@ export async function createTempProduct(
   if (parseFloat(variantPrice) === 0) {
     console.warn(`[Warning] Variant price is 0 - expected ${price.toFixed(2)}`);
   } else {
-    console.log(`[Success] Variant price set to: ${variantPrice} TL`);
+    console.log(`[Success] Variant price set to: ${variantPrice} $`);
   }
   
   console.log(`[Success] ✅ Product created (temp-hidden)`);

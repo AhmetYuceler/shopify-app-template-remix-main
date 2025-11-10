@@ -12,7 +12,7 @@ Shopify mağazalarında ürün boyutlarına (Boy × En) ve materyale göre dinam
 
 ### ✨ Temel Özellikler
 - **Dinamik Fiyat Hesaplama**: Boy × En × Katsayı + Materyal fiyatı formülü
-- **3 Materyal Seçeneği**: Ahşap (50 TL), Metal (100 TL), Plastik (30 TL)
+- **3 Materyal Seçeneği**: Ahşap (50 $), Metal (100 $), Plastik (30 $)
 - **Gerçek Zamanlı Fiyat Gösterimi**: Kullanıcı input değiştirince anında güncellenir
 - **Geçici Ürün Oluşturma**: Her sipariş için benzersiz Shopify ürünü (katalog listelerinde gizli, doğrudan URL ile erişilebilir)
 - **Otomatik Temizlik**: 2 saat sonra geçici ürünler otomatik silinir
@@ -114,7 +114,7 @@ Vitrin'de herhangi bir ürün sayfasını açın:
 - Boy: `400`
 - En: `500`
 - Materyal: `Ahşap`
-- Beklenen Fiyat: `74.00 TL`
+- Beklenen Fiyat: `74.00 $`
 
 ---
 

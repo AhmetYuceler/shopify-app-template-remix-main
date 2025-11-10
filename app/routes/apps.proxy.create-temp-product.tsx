@@ -1,7 +1,7 @@
 /**
- * Shopify App Proxy Route: Geçici Ürün Oluşturma
+ * Shopify App Proxy Route: Temporary Product Creation
  * 
- * Storefront'tan erişilebilir endpoint (Shopify App Proxy ile)
+ * Accessible endpoint from storefront (via Shopify App Proxy)
  * URL: https://[store].myshopify.com/apps/[proxy-path]/create-temp-product
  */
 
@@ -50,8 +50,9 @@ export async function action({ request }: ActionFunctionArgs) {
     const height = parseInt(formData.get("height") as string);
     const width = parseInt(formData.get("width") as string);
     const material = formData.get("material") as string;
+    const imageUrl = formData.get("imageUrl") as string | null;
     
-    // Validasyon
+    // Validation
     const errors = validateInputs(height, width, material);
     if (errors.length > 0) {
       return json(
@@ -60,11 +61,11 @@ export async function action({ request }: ActionFunctionArgs) {
       );
     }
     
-    // Fiyat hesapla
+    // Calculate price
     const price = calculatePrice(height, width, material as MaterialType);
     const materialName = MATERIAL_NAMES[material as MaterialType];
     
-    // 1) Mevcut geçici ürün var mı? (2 saatlik TTL içinde, silinmemiş)
+    // 1) Is there an existing temp product? (within 2-hour TTL, not deleted)
     const existing = await db.tempProduct.findFirst({
       where: {
         shop: session.shop,
@@ -78,7 +79,7 @@ export async function action({ request }: ActionFunctionArgs) {
     });
 
     if (existing) {
-      const existingTitle = `Özel Çerçeve ${height}×${width}mm - ${materialName}`;
+      const existingTitle = `Custom Frame ${height}×${width}mm - ${materialName}`;
       console.log(`[ProxyTempProduct] Reuse existing: ${existing.productId}`);
       return json(
         {
@@ -98,13 +99,14 @@ export async function action({ request }: ActionFunctionArgs) {
       );
     }
 
-    // 2) Yoksa Shopify'da geçici ürün oluştur
+    // 2) Otherwise, create a temp product in Shopify
     const productData: TempProductData = {
       height,
       width,
       material,
       materialName,
-      price
+      price,
+      imageUrl: imageUrl || undefined
     };
 
     const { productId, variantId, title } = await createTempProduct(
@@ -112,7 +114,7 @@ export async function action({ request }: ActionFunctionArgs) {
       productData
     );
 
-    // 3) Veritabanına kaydet (2 saat sonra silinmek üzere)
+    // 3) Save to database (to be deleted after 2 hours)
     const now = new Date();
     const deleteAt = new Date(now.getTime() + 2 * 60 * 60 * 1000);
 
@@ -129,7 +131,7 @@ export async function action({ request }: ActionFunctionArgs) {
       }
     });
 
-    console.log(`[ProxyTempProduct] Oluşturuldu: ${productId} - ${title}`);
+    console.log(`[ProxyTempProduct] Created: ${productId} - ${title}`);
 
     return json(
       {
@@ -149,12 +151,12 @@ export async function action({ request }: ActionFunctionArgs) {
     );
     
   } catch (error) {
-    console.error("[ProxyTempProduct] Hata:", error);
+    console.error("[ProxyTempProduct] Error:", error);
     
     return json(
       {
         success: false,
-        error: error instanceof Error ? error.message : "Ürün oluşturulamadı"
+        error: error instanceof Error ? error.message : "Failed to create product"
       },
       { status: 500, headers: corsHeaders }
     );
@@ -163,7 +165,7 @@ export async function action({ request }: ActionFunctionArgs) {
 
 export const loader = async () => {
   return json(
-    { error: "POST request gerekli" },
+    { error: "POST request required" },
     { status: 405, headers: corsHeaders }
   );
 };

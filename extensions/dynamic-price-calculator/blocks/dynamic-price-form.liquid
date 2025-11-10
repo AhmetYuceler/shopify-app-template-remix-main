@@ -1,16 +1,19 @@
 {% comment %}
-  Dinamik Fiyat Hesaplayıcı - Tema Bloğu
+  Dynamic Price Calculator - Theme Block
 
-  Bu blok ürün sayfasına eklenerek kullanıcıdan:
-  - Boy (mm)
-  - En (mm)
-  - Materyal (Ahşap/Metal/Plastik)
-  bilgilerini alır ve dinamik fiyat hesaplar.
+  This block is added to product pages to collect:
+  - Height (mm)
+  - Width (mm)
+  - Material (Wood/Metal/Plastic)
+  and calculate dynamic pricing.
 {% endcomment %}
 
 <div
   class="dynamic-price-calculator"
   data-product-id="{{ product.id }}"
+  data-variant-id="{{ product.selected_or_first_available_variant.id }}"
+  data-product-title="{{ product.title | escape }}"
+  data-product-image="{% if product.featured_image %}{{ product.featured_image | image_url: width: 800 }}{% endif %}"
   data-section-cart-drawer="{{ block.settings.cart_drawer_section_id | default: 'cart-drawer' }}"
   data-section-cart-icon="{{ block.settings.cart_icon_section_id | default: 'cart-icon-bubble' }}"
 >
@@ -19,10 +22,10 @@
     <p class="calculator-description">{{ block.settings.description }}</p>
 
     <form id="dynamic-price-form" class="price-form">
-      {%- comment -%} Boy girişi {%- endcomment -%}
+      {%- comment -%} Height input {%- endcomment -%}
       <div class="form-group">
         <label for="height-input">
-          Boy (mm)
+          Height (mm)
           <span class="required">*</span>
         </label>
         <input
@@ -32,16 +35,16 @@
           min="100"
           max="5000"
           step="1"
-          placeholder="Örn: 400"
+          placeholder="e.g: 400"
           required
         >
-        <small class="help-text">100mm - 5000mm arası</small>
+        <small class="help-text">Between 100mm - 5000mm</small>
       </div>
 
-      {%- comment -%} En girişi {%- endcomment -%}
+      {%- comment -%} Width input {%- endcomment -%}
       <div class="form-group">
         <label for="width-input">
-          En (mm)
+          Width (mm)
           <span class="required">*</span>
         </label>
         <input
@@ -51,63 +54,55 @@
           min="100"
           max="5000"
           step="1"
-          placeholder="Örn: 500"
+          placeholder="e.g: 500"
           required
         >
-        <small class="help-text">100mm - 5000mm arası</small>
+        <small class="help-text">Between 100mm - 5000mm</small>
       </div>
 
-      {%- comment -%} Materyal seçimi {%- endcomment -%}
+      {%- comment -%} Material selection {%- endcomment -%}
       <div class="form-group">
         <label for="material-select">
-          Materyal
+          Material
           <span class="required">*</span>
         </label>
         <select id="material-select" name="material" required>
-          <option value="">Seçiniz...</option>
-          <option value="wood">Ahşap (+50 TL)</option>
-          <option value="metal">Metal (+100 TL)</option>
-          <option value="plastic">Plastik (+30 TL)</option>
+          <option value="">Select...</option>
+          <option value="wood">Wood (+50 $)</option>
+          <option value="metal">Metal (+100 $)</option>
+          <option value="plastic">Plastic (+30 $)</option>
         </select>
       </div>
 
-      {%- comment -%} Dinamik fiyat gösterimi {%- endcomment -%}
+      {%- comment -%} Dynamic price display - Live updates {%- endcomment -%}
       <div class="price-display" id="price-display" style="display: none;">
-        <div class="price-label">Tahmini Fiyat:</div>
-        <div class="price-value" id="price-value">0.00 TL</div>
+        <div class="price-label">Estimated Price:</div>
+        <div class="price-value" id="price-value">0.00 $</div>
         <div class="price-details" id="price-details"></div>
       </div>
 
-      {%- comment -%} Hata mesajları {%- endcomment -%}
+      {%- comment -%} Error messages {%- endcomment -%}
       <div class="error-message" id="error-message" style="display: none;"></div>
 
-      {%- comment -%} Fiyat hesapla butonu {%- endcomment -%}
-      <button
-        type="button"
-        class="calculate-price-btn"
-        id="calculate-price-btn"
-      >
-        <span class="btn-text">Fiyat Hesapla</span>
-      </button>
-
-      {%- comment -%} Sepete ekle butonu (ürün oluştuktan sonra gösterilecek) {%- endcomment -%}
+      {%- comment -%} Add to cart button - Shows when form is valid {%- endcomment -%}
       <button
         type="button"
         class="add-to-cart-btn"
         id="add-to-cart-btn"
         style="display: none;"
+        disabled
       >
-        <span class="btn-text">Sepete Ekle</span>
+        <span class="btn-text">Add to Cart</span>
         <span class="btn-loader" style="display: none;">
           <span class="spinner"></span>
-          Ekleniyor...
+          Adding...
         </span>
       </button>
 
-      {%- comment -%} Başarı mesajı {%- endcomment -%}
-      <div class="success-message" id="success-message" style="display: none;">✓ Ürün başarıyla sepete eklendi!</div>
+      {%- comment -%} Success message {%- endcomment -%}
+      <div class="success-message" id="success-message" style="display: none;">✓ Product successfully added to cart!</div>
 
-      {%- comment -%} Info mesajı {%- endcomment -%}
+      {%- comment -%} Info message {%- endcomment -%}
       <div class="info-message" id="info-message" style="display: none;"></div>
     </form>
   </div>
@@ -222,6 +217,24 @@
     line-height: 1.5;
   }
 
+  .price-note {
+    margin-top: 1rem;
+    padding: 0.875rem;
+    background: #fff7ed;
+    border: 1px solid #fed7aa;
+    border-left: 4px solid #f97316;
+    border-radius: 8px;
+    font-size: 0.813rem;
+    color: #9a3412;
+    text-align: left;
+    line-height: 1.5;
+  }
+
+  .price-note strong {
+    color: #ea580c;
+    font-weight: 700;
+  }
+
   .error-message {
     padding: 1rem;
     background: #fef2f2;
@@ -235,16 +248,18 @@
   }
 
   .success-message {
-    padding: 1rem;
+    padding: 1.25rem;
     background: #f0fdf4;
     border: 1px solid #bbf7d0;
     border-left: 4px solid #22c55e;
     border-radius: 8px;
     color: #166534;
     margin-top: 1rem;
-    text-align: center;
-    font-weight: 600;
-    font-size: 0.938rem;
+    text-align: left;
+    font-weight: 500;
+    font-size: 0.875rem;
+    line-height: 1.6;
+    white-space: pre-line;
   }
 
   .info-message {
@@ -367,16 +382,22 @@
   }
 </style>
 
-{%- comment -%} JavaScript {%- endcomment -%}
+{%- comment -%} JavaScript - Live Price Calculation {%- endcomment -%}
 <script>
   (function () {
     const container = document.querySelector('.dynamic-price-calculator');
     const DRAWER_SECTION_ID = container?.dataset.sectionCartDrawer || 'cart-drawer';
     const ICON_SECTION_ID = container?.dataset.sectionCartIcon || 'cart-icon-bubble';
-    // Bazı temalarda cart-notification kullanılır; varsa onu da hedefle
     const NOTIFICATION_SECTION_ID = document.getElementById('shopify-section-cart-notification')
       ? 'cart-notification'
       : null;
+    
+    // Get product information
+    const PRODUCT_ID = container?.dataset.productId;
+    const VARIANT_ID = container?.dataset.variantId;
+    const PRODUCT_TITLE = container?.dataset.productTitle;
+    const PRODUCT_IMAGE = container?.dataset.productImage;
+    
     const form = document.getElementById('dynamic-price-form');
     const heightInput = document.getElementById('height-input');
     const widthInput = document.getElementById('width-input');
@@ -384,102 +405,120 @@
     const priceDisplay = document.getElementById('price-display');
     const priceValue = document.getElementById('price-value');
     const priceDetails = document.getElementById('price-details');
-
-    const calculateBtn = document.getElementById('calculate-price-btn');
     const addToCartBtn = document.getElementById('add-to-cart-btn');
-
     const errorMessage = document.getElementById('error-message');
     const successMessage = document.getElementById('success-message');
     const infoMessage = document.getElementById('info-message');
 
-    let createdProduct = null; // Oluşturulan ürün bilgisi
-    let isAddingToCart = false; // Çift tıklama / paralel ekleme koruması
+    let currentCalculation = null; // Current calculation info
+    let isAddingToCart = false; // Double-click protection
 
-    // 1. ADIM: Fiyat Hesapla
-    calculateBtn.addEventListener('click', async () => {
+    console.log('[DynamicPriceCalculator] Initialized with product:', PRODUCT_ID, 'variant:', VARIANT_ID, 'image:', PRODUCT_IMAGE);
+
+    // TASK 7 & 8: Pricing Rules and Live Calculation
+    const MATERIAL_PRICES = {
+      wood: 50,    // Wood
+      metal: 100,  // Metal
+      plastic: 30  // Plastic
+    };
+
+    const MATERIAL_NAMES = {
+      wood: 'Wood',
+      metal: 'Metal',
+      plastic: 'Plastic'
+    };
+
+    // Coefficient table (based on Height × Width ranges)
+    const PRICE_RANGES = [
+      { min: 0, max: 100000, coefficient: 1.0 },
+      { min: 100000, max: 200000, coefficient: 1.2 },
+      { min: 200000, max: 300000, coefficient: 1.5 },
+      { min: 300000, max: Infinity, coefficient: 2.0 }
+    ];
+
+    function getCoefficient(height, width) {
+      const area = height * width;
+      const range = PRICE_RANGES.find(r => area >= r.min && area < r.max);
+      return range ? range.coefficient : PRICE_RANGES[PRICE_RANGES.length - 1].coefficient;
+    }
+
+    function calculatePrice(height, width, material) {
+      const coefficient = getCoefficient(height, width);
+      const materialPrice = MATERIAL_PRICES[material];
+      const area = height * width;
+      const price = (area * coefficient / 10000) + materialPrice;
+      return Math.round(price * 100) / 100;
+    }
+
+    // TASK 8: Live price update on form changes
+    function updatePrice() {
       const height = parseInt(heightInput.value);
       const width = parseInt(widthInput.value);
       const material = materialSelect.value;
 
-      // Validasyon
+      // Validation
       if (!height || !width || !material) {
-        showError('Lütfen tüm alanları doldurun');
+        priceDisplay.style.display = 'none';
+        addToCartBtn.style.display = 'none';
+        hideError();
         return;
       }
 
       if (height < 100 || height > 5000 || width < 100 || width > 5000) {
-        showError('Boy ve En 100mm ile 5000mm arasında olmalıdır');
+        showError('Height and Width must be between 100mm and 5000mm');
+        priceDisplay.style.display = 'none';
+        addToCartBtn.style.display = 'none';
         return;
       }
 
-      calculateBtn.disabled = true;
-      calculateBtn.textContent = 'Hazırlanıyor...';
       hideError();
-      hideSuccess();
-      hideInfo();
 
-      try {
-        const formData = new FormData();
-        formData.append('height', height);
-        formData.append('width', width);
-        formData.append('material', material);
+      // Calculate price
+      const price = calculatePrice(height, width, material);
+      const coefficient = getCoefficient(height, width);
+      const area = height * width;
+      const materialName = MATERIAL_NAMES[material];
 
-        const response = await fetch('/apps/proxy/calculate-price', {
-          method: 'POST',
-          body: formData,
-        });
+      // Store calculation info
+      currentCalculation = {
+        height,
+        width,
+        material,
+        materialName,
+        price,
+        coefficient,
+        area
+      };
 
-        const data = await response.json();
+      // Update price display
+      priceValue.textContent = `${price.toFixed(2)} $`;
+      priceDetails.innerHTML = `
+        Area: ${area.toLocaleString()} mm² • 
+        Coefficient: ${coefficient} • 
+        Material: ${materialName}
+      `;
+      priceDisplay.style.display = 'block';
+      
+      // Enable add to cart button
+      addToCartBtn.style.display = 'block';
+      addToCartBtn.disabled = false;
+    }
 
-        if (data.success) {
-          priceValue.textContent = data.calculation.formatted;
-          priceDetails.innerHTML = `
-          Alan: ${data.calculation.area.toLocaleString()} mm² • 
-          Katsayı: ${data.calculation.coefficient} • 
-          Materyal: ${data.calculation.material}
-        `;
-          priceDisplay.style.display = 'block';
-          hideError();
+    // Input event listeners - TASK 8: Live updates
+    heightInput.addEventListener('input', updatePrice);
+    widthInput.addEventListener('input', updatePrice);
+    materialSelect.addEventListener('change', updatePrice);
 
-          // calculate-price artık product payload da döndürüyor
-          if (data.product) {
-            createdProduct = data.product;
-            addToCartBtn.style.display = 'block';
-            addToCartBtn.disabled = false;
-          } else {
-            // Her ihtimale karşı fallback olarak create-temp-product'a gider
-            const createFormData = new FormData();
-            createFormData.append('height', height);
-            createFormData.append('width', width);
-            createFormData.append('material', material);
-            const createResp = await fetch('/apps/proxy/create-temp-product', {
-              method: 'POST',
-              body: createFormData,
-            });
-            const createData = await createResp.json();
-            if (createData.success && createData.product) {
-              createdProduct = createData.product;
-              addToCartBtn.style.display = 'block';
-              addToCartBtn.disabled = false;
-            }
-          }
-        } else {
-          showError(data.error);
-        }
-      } catch (error) {
-        console.error('[ERROR] Fiyat hesaplama:', error);
-        showError('Fiyat hesaplanamadı');
-      } finally {
-        calculateBtn.disabled = false;
-        calculateBtn.textContent = 'Fiyat Hesapla';
-      }
-    });
+    // Also check on blur events
+    heightInput.addEventListener('blur', updatePrice);
+    widthInput.addEventListener('blur', updatePrice);
 
-    // 3. ADIM: Sepete Ekle
+    // TASK 9 & 10: Add to Cart - Create temp product with backend!
     addToCartBtn.addEventListener('click', async () => {
-      if (isAddingToCart) return; // zaten çalışıyor
-      if (!createdProduct) {
-        showError('Önce ürün oluşturmalısınız');
+      if (isAddingToCart) return; // Double-click protection
+      
+      if (!currentCalculation) {
+        showError('Please enter valid values first');
         return;
       }
 
@@ -491,125 +530,145 @@
       hideSuccess();
       hideInfo();
 
-      const MAX_RETRIES = 7;
-      const RETRY_INTERVAL = 700; // ms
+      try {
+        console.log('[TempProduct] Creating product via backend...');
+        console.log('[TempProduct] Calculation:', currentCalculation);
 
-      const attemptAdd = async (tryIndex = 0) => {
-        console.log(`[CartAttempt] Deneme ${tryIndex + 1}/${MAX_RETRIES}`);
-        try {
-          const resp = await fetch('/cart/add.js', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              id: createdProduct.variantId,
-              quantity: 1,
-              properties: {
-                Boyut: `${createdProduct.height}×${createdProduct.width}mm`,
-                Materyal: createdProduct.material,
-                'Özel Fiyat': `${createdProduct.price} TL`,
-              },
-              // Dawn ve türevleri: response içine section HTML'lerini dahil et
-              sections: [ICON_SECTION_ID, DRAWER_SECTION_ID, NOTIFICATION_SECTION_ID].filter(Boolean),
-              sections_url: window.location.pathname,
-            }),
-          });
-          if (resp.ok) {
-            const data = await resp.json();
-            console.log('[SUCCESS] Added to cart:', data);
-
-            // Temanın drawer/cart mekanizmasını tetikle - sections DOM replace yerine custom events
-            try {
-              // 1) Response'dan sections geldiyse replaceSectionsHtml uygula
-              if (data?.sections && typeof data.sections === 'object') {
-                replaceSectionsHtml(data.sections);
-              }
-
-              // 2) Cart güncellemesi için /cart.js fetch et ve global publish et
-              const cartResp = await fetch('/cart.js');
-              if (cartResp.ok) {
-                const cartData = await cartResp.json();
-                // Tema dinleyebilir: cart:updated, cart:refresh, theme:cart:update gibi
-                document.documentElement.dispatchEvent(
-                  new CustomEvent('cart:refresh', {
-                    bubbles: true,
-                    detail: { cart: cartData },
-                  })
-                );
-              }
-
-              // 3) Cart drawer'ı aç - farklı tema patternları dene
-              setTimeout(() => {
-                // Dawn theme pattern
-                const drawerEl = document.querySelector('cart-drawer');
-                if (drawerEl) {
-                  if (typeof drawerEl.open === 'function') {
-                    drawerEl.open();
-                  } else if (typeof drawerEl.renderContents === 'function') {
-                    drawerEl.renderContents(data).then(() => drawerEl.open?.());
-                  }
-                }
-
-                // Diğer temalar için genel click/toggle
-                const drawerToggle =
-                  document.querySelector('[data-cart-drawer-toggle]') ||
-                  document.querySelector('.cart-drawer__toggle') ||
-                  document.querySelector('#cart-icon-bubble');
-                if (drawerToggle && !drawerEl) {
-                  drawerToggle.click();
-                }
-
-                // Fallback: custom event
-                document.dispatchEvent(new CustomEvent('cart:open', { bubbles: true }));
-              }, 100);
-            } catch (e) {
-              console.warn('[WARN] Cart refresh flow failed', e);
-            }
-
-            showSuccess('Ürün sepete eklendi!');
-
-            // Başarılı olduğunda butonu pasif bırak ve metni değiştir
-            addToCartBtn.querySelector('.btn-loader').style.display = 'none';
-            addToCartBtn.querySelector('.btn-text').style.display = 'inline';
-            addToCartBtn.querySelector('.btn-text').textContent = 'Sepete Eklendi';
-            addToCartBtn.disabled = true;
-            isAddingToCart = false;
-            setTimeout(resetForm, 1600);
-            return;
-          } else {
-            const err = await resp.json().catch(() => ({}));
-            if (err?.description === 'Cannot find variant') {
-              if (tryIndex < MAX_RETRIES - 1) {
-                showInfo('Ürün hazırlanıyor… Sepete eklenmesi için birkaç saniye bekleniyor.');
-                return setTimeout(() => attemptAdd(tryIndex + 1), RETRY_INTERVAL);
-              } else {
-                showError('Ürün henüz hazır değil. Lütfen ölçüleri yeniden girip tekrar deneyin.');
-              }
-            } else {
-              showError('Sepete eklenemedi. Lütfen tekrar deneyin.');
-            }
-          }
-        } catch (e) {
-          console.error('[ERROR] Cart add attempt failed:', e);
-          if (tryIndex < MAX_RETRIES - 1) {
-            showInfo('Bağlantı sorunu… Yeniden deneniyor.');
-            return setTimeout(() => attemptAdd(tryIndex + 1), RETRY_INTERVAL);
-          }
-          showError('İşlem başarısız. Lütfen tekrar deneyin.');
-        } finally {
-          // Başarıya kadar loader açık kalsın; başarısız son durumda butonu yeniden etkinleştir
-          if (successMessage.style.display !== 'block') {
-            addToCartBtn.querySelector('.btn-loader').style.display = 'none';
-            addToCartBtn.querySelector('.btn-text').style.display = 'inline';
-            addToCartBtn.disabled = false;
-            isAddingToCart = false;
-          }
+        // Send request to backend - Create temp product
+        const formData = new FormData();
+        formData.append('height', currentCalculation.height);
+        formData.append('width', currentCalculation.width);
+        formData.append('material', currentCalculation.material);
+        
+        // Add product image
+        if (PRODUCT_IMAGE) {
+          formData.append('imageUrl', PRODUCT_IMAGE);
         }
-      };
 
-      attemptAdd(0);
+        const createResponse = await fetch('/apps/proxy/create-temp-product', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!createResponse.ok) {
+          throw new Error('Product creation failed - Backend did not respond');
+        }
+
+        const createData = await createResponse.json();
+
+        if (!createData.success || !createData.product) {
+          throw new Error(createData.error || 'Product creation failed');
+        }
+
+        const product = createData.product;
+        console.log('[TempProduct] ✅ Created:', product);
+
+        // Add to cart (with retry)
+        await attemptAddToCart(product, 0);
+
+      } catch (error) {
+        console.error('[ERROR] Add to cart:', error);
+        const errorMsg = error instanceof Error ? error.message : 'Operation failed';
+        
+        if (errorMsg.includes('Backend') || errorMsg.includes('fetch')) {
+          showError('⚠️ Backend connection failed. Please make sure the app is running.\n\nDevelopment: npm run dev\nProduction: App needs to be deployed.');
+        } else {
+          showError(errorMsg);
+        }
+        
+        addToCartBtn.querySelector('.btn-loader').style.display = 'none';
+        addToCartBtn.querySelector('.btn-text').style.display = 'inline';
+        addToCartBtn.disabled = false;
+        isAddingToCart = false;
+      }
     });
 
-    // Yardımcı fonksiyonlar
+    // TASK 10: Add to cart attempt (with retry mechanism)
+    const MAX_RETRIES = 7; // Backend is creating product, need to wait
+    const RETRY_INTERVAL = 700;
+
+    async function attemptAddToCart(product, tryIndex) {
+      console.log(`[CartAttempt] Attempt ${tryIndex + 1}/${MAX_RETRIES}`);
+      
+      try {
+        // Use temp product variant ID from backend
+        const variantId = product.variantId;
+        
+        console.log(`[Cart] Variant ID: ${variantId}, Price: ${product.price} $`);
+        
+        // Add to cart
+        const resp = await fetch('/cart/add.js', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: variantId,
+            quantity: 1,
+            properties: {
+              'Height (mm)': currentCalculation.height.toString(),
+              'Width (mm)': currentCalculation.width.toString(),
+              'Material': currentCalculation.materialName,
+              'Area (mm²)': currentCalculation.area.toLocaleString(),
+              'Coefficient': currentCalculation.coefficient.toString(),
+              'Custom Price': `${product.price.toFixed(2)} $`
+            },
+            sections: [ICON_SECTION_ID, DRAWER_SECTION_ID, NOTIFICATION_SECTION_ID].filter(Boolean),
+            sections_url: window.location.pathname,
+          }),
+        });
+
+        if (resp.ok) {
+          const data = await resp.json();
+          console.log('[SUCCESS] ✅ Added to cart:', data);
+
+          // Update sections
+          if (data?.sections && typeof data.sections === 'object') {
+            replaceSectionsHtml(data.sections);
+          }
+
+          // Update cart UI
+          await updateCartUI();
+
+          // Open drawer
+          openCartDrawer();
+
+          // Success message
+          const successMsg = `✓ Product added to cart!\n\n💰 Custom Price: ${product.price.toFixed(2)} $\n\n✅ Correct price will be shown in cart!`;
+          showSuccess(successMsg);
+          
+          // Update button
+          addToCartBtn.querySelector('.btn-loader').style.display = 'none';
+          addToCartBtn.querySelector('.btn-text').style.display = 'inline';
+          addToCartBtn.querySelector('.btn-text').textContent = '✓ Added to Cart';
+          isAddingToCart = false;
+          
+          // Reset UI
+          setTimeout(() => {
+            resetForm();
+          }, 2500);
+
+        } else {
+          const err = await resp.json().catch(() => ({}));
+          
+          // Variant not ready yet, wait
+          if (err?.description === 'Cannot find variant' && tryIndex < MAX_RETRIES - 1) {
+            showInfo('⏳ Product being prepared... Please wait.');
+            setTimeout(() => attemptAddToCart(product, tryIndex + 1), RETRY_INTERVAL);
+          } else {
+            throw new Error(err?.message || err?.description || 'Failed to add to cart');
+          }
+        }
+
+      } catch (error) {
+        if (tryIndex < MAX_RETRIES - 1) {
+          showInfo('🔄 Retrying...');
+          setTimeout(() => attemptAddToCart(product, tryIndex + 1), RETRY_INTERVAL);
+        } else {
+          throw error;
+        }
+      }
+    }
+
+    // Helper Functions
     function showError(message) {
       errorMessage.textContent = message;
       errorMessage.style.display = 'block';
@@ -620,9 +679,7 @@
     }
 
     function showSuccess(message) {
-      if (message) {
-        successMessage.textContent = message;
-      }
+      successMessage.textContent = message;
       successMessage.style.display = 'block';
     }
 
@@ -645,14 +702,15 @@
       materialSelect.value = '';
       priceDisplay.style.display = 'none';
       addToCartBtn.style.display = 'none';
-      createdProduct = null;
+      addToCartBtn.querySelector('.btn-text').textContent = 'Add to Cart';
+      currentCalculation = null;
       isAddingToCart = false;
       hideError();
       hideSuccess();
       hideInfo();
     }
 
-    // Server'dan dönen sections HTML haritasını uygun section container'larına uygular
+    // Section HTML güncelleme
     function replaceSectionsHtml(sectionsMap) {
       if (!sectionsMap) return;
       const sectionIds = [ICON_SECTION_ID, DRAWER_SECTION_ID, NOTIFICATION_SECTION_ID].filter(Boolean);
@@ -673,118 +731,104 @@
       });
     }
 
-    /**
-     * Sepet sayacı ve drawer bölümünü günceller
-     * Katmanlar:
-     * 1) /cart.js ile item_count al ve yaygın seçicileri güncelle
-     * 2) sections endpoint ile fallback güncelleme
-     * 3) Custom event yayınla
-     */
-    async function updateCartUI(addedResponseData) {
-      // 1) /cart.js'den güncel sepet
-      let cartJson;
+    // Cart UI güncelleme
+    async function updateCartUI() {
       try {
-        const r = await fetch('/cart.js');
-        if (r.ok) {
-          cartJson = await r.json();
+        const cartResp = await fetch('/cart.js');
+        if (cartResp.ok) {
+          const cartData = await cartResp.json();
+          const itemCount = cartData.item_count;
+          
+          // Cart sayacını güncelle
+          const selectors = [
+            '[data-cart-count]',
+            '#cart-count',
+            '.cart-count-bubble .count',
+            '.cart-count-bubble[data-cart-count-bubble]',
+            '.header__icon--cart .cart-count-bubble',
+          ];
+          const unique = new Set();
+          selectors.forEach((sel) => {
+            document.querySelectorAll(sel).forEach((el) => unique.add(el));
+          });
+          unique.forEach((el) => {
+            const inner = el.querySelector?.('.count') || el;
+            inner.textContent = itemCount.toString();
+            el.classList?.toggle('hidden', itemCount === 0);
+          });
+
+          // Custom event yayınla
+          document.documentElement.dispatchEvent(
+            new CustomEvent('cart:refresh', {
+              bubbles: true,
+              detail: { cart: cartData },
+            })
+          );
         }
       } catch (e) {
-        console.warn('[Cart] /cart.js fetch failed', e);
-      }
-      const itemCount =
-        cartJson?.item_count ??
-        (addedResponseData?.items?.length
-          ? addedResponseData.items.reduce((a, i) => a + (i.quantity || 0), 0)
-          : undefined);
-      if (typeof itemCount === 'number') {
-        const selectors = [
-          '[data-cart-count]',
-          '#cart-count',
-          '.cart-count-bubble .count',
-          '.cart-count-bubble[data-cart-count-bubble]',
-          '.header__icon--cart .cart-count-bubble',
-        ];
-        const unique = new Set();
-        selectors.forEach((sel) => {
-          document.querySelectorAll(sel).forEach((el) => unique.add(el));
-        });
-        unique.forEach((el) => {
-          const inner = el.querySelector?.('.count') || el;
-          inner.textContent = itemCount.toString();
-          el.classList?.toggle('hidden', itemCount === 0);
-        });
-      }
-
-      // 2) Dawn ve benzeri temalarda sections-rendering API ile sepet ikonunu ve çekmeceyi tazele (fallback)
-      try {
-        const sectionsToRender = [ICON_SECTION_ID, DRAWER_SECTION_ID].filter(Boolean);
-        if (sectionsToRender.length) {
-          const url = `/?sections=${encodeURIComponent(sectionsToRender.join(','))}`;
-          const res = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
-          if (res.ok) {
-            const sectionsHtml = await res.json();
-            sectionsToRender.forEach((sid) => {
-              const html = sectionsHtml?.[sid];
-              if (!html) return;
-              const containerId = `shopify-section-${sid}`;
-              const container = document.getElementById(containerId);
-              if (!container) return;
-              const wrapper = document.createElement('div');
-              wrapper.innerHTML = html;
-              const nextEl = wrapper.firstElementChild;
-              if (nextEl && nextEl.id === containerId) {
-                container.replaceWith(nextEl);
-              } else {
-                // Bazı temalarda JSON direkt section içeriği dönebilir
-                container.innerHTML = html;
-              }
-            });
-          }
-        }
-      } catch (e) {
-        console.warn('[Cart] sections render failed', e);
-      }
-
-      // 3) Custom event (tema dinleyebilir)
-      try {
-        const event = new CustomEvent('cart:refresh', { detail: { cart: cartJson } });
-        document.dispatchEvent(event);
-      } catch (e) {
-        /* ignore */
+        console.warn('[Cart] Update failed:', e);
       }
     }
+
+    // Cart drawer açma
+    function openCartDrawer() {
+      setTimeout(() => {
+        // Dawn theme pattern
+        const drawerEl = document.querySelector('cart-drawer');
+        if (drawerEl) {
+          if (typeof drawerEl.open === 'function') {
+            drawerEl.open();
+          } else if (typeof drawerEl.renderContents === 'function') {
+            drawerEl.renderContents().then(() => drawerEl.open?.());
+          }
+        }
+
+        // Diğer temalar için genel toggle
+        const drawerToggle =
+          document.querySelector('[data-cart-drawer-toggle]') ||
+          document.querySelector('.cart-drawer__toggle') ||
+          document.querySelector('#cart-icon-bubble');
+        if (drawerToggle && !drawerEl) {
+          drawerToggle.click();
+        }
+
+        // Fallback: custom event
+        document.dispatchEvent(new CustomEvent('cart:open', { bubbles: true }));
+      }, 100);
+    }
+
   })();
 </script>
 {% schema %}
 {
-  "name": "Dinamik Fiyat Hesaplayıcı",
+  "name": "Dynamic Price Calculator",
   "target": "section",
   "settings": [
     {
       "type": "text",
       "id": "title",
-      "label": "Başlık",
-      "default": "Özel Ölçülerinizi Girin"
+      "label": "Title",
+      "default": "Enter Your Custom Measurements"
     },
     {
       "type": "textarea",
       "id": "description",
-      "label": "Açıklama",
-      "default": "Ürününüzün boy, en ve materyal bilgilerini girerek özel fiyatınızı hesaplayın."
+      "label": "Description",
+      "default": "Calculate your custom price by entering height, width and material information."
     },
     {
       "type": "text",
       "id": "cart_drawer_section_id",
       "label": "Cart Drawer Section ID",
       "default": "cart-drawer",
-      "info": "Temanızdaki sepet çekmecesi section ID'si (Örn: cart-drawer)."
+      "info": "The cart drawer section ID in your theme (e.g: cart-drawer)."
     },
     {
       "type": "text",
       "id": "cart_icon_section_id",
       "label": "Cart Icon/Bubble Section ID",
       "default": "cart-icon-bubble",
-      "info": "Temanızdaki sepet simgesi/sayaç section ID'si (Örn: cart-icon-bubble)."
+      "info": "The cart icon/counter section ID in your theme (e.g: cart-icon-bubble)."
     }
   ]
 }

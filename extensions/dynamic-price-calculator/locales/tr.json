@@ -8,7 +8,7 @@
     "material_wood": "Ahşap",
     "material_metal": "Metal",
     "material_plastic": "Plastik",
-    "price_label": "Tahmini Fiyat",
+    "price_label": "Tahmini Fiyat:",
     "add_to_cart": "Sepete Ekle",
     "adding_to_cart": "Ekleniyor...",
     "success_message": "Ürün sepete eklendi!",
