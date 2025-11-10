@@ -5,6 +5,10 @@ name = "rmx-yuceler"
 application_url = "https://web-production-e05ff.up.railway.app"
 embedded = true
 
+[build]
+automatically_update_urls_on_dev = true
+dev_store_url = "remixapp-2.myshopify.com"
+
 [webhooks]
 api_version = "2026-01"
 
@@ -18,18 +22,16 @@ api_version = "2026-01"
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "write_products,read_products,read_themes,write_draft_orders,write_publications,read_publications"
+scopes = "write_draft_orders,read_products,write_products,read_publications,write_publications,read_themes"
+optional_scopes = [ ]
+use_legacy_install_flow = false
 
 [auth]
 redirect_urls = [
   "https://web-production-e05ff.up.railway.app/api/auth",
-  "http://localhost/api/auth",
-  "http://127.0.0.1/api/auth"
+  "https://web-production-e05ff.up.railway.app/api/auth/callback",
+  "https://web-production-e05ff.up.railway.app/auth/callback"
 ]
-
-[build]
-automatically_update_urls_on_dev = true
-dev_store_url = "remixapp-2.myshopify.com"
 
 [app_proxy]
 url = "https://web-production-e05ff.up.railway.app"
