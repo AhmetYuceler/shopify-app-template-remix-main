@@ -79,6 +79,18 @@ const shopify = shopifyApp({
     : {}),
 });
 
+// Optional diagnostic logging to help debug missing env vars in hosted environments like Railway.
+if (process.env.DEBUG_SHOPIFY_ENV === "true") {
+  // eslint-disable-next-line no-console
+  console.log(
+    "[shopify-app][env-debug] Available env keys:",
+    Object.keys(process.env)
+      .filter((k) => k.startsWith("SHOPIFY") || ["HOST", "SCOPES"].includes(k))
+      .sort()
+      .join(", ")
+  );
+}
+
 export default shopify;
 export const apiVersion = ApiVersion.January25;
 export const addDocumentResponseHeaders = shopify.addDocumentResponseHeaders;
