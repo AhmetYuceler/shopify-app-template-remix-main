@@ -169,8 +169,8 @@ export async function createTempProduct(
     }
   `;
   
-  // Build product input
-  const productInput: any = {
+  // Build product input (without media - will be added separately)
+  const productInput = {
     title,
     descriptionHtml,
     productType: "Temporary Product",
@@ -203,29 +203,6 @@ export async function createTempProduct(
       }
     ]
   };
-  
-  // Add product image if available
-  if (imageUrl && imageUrl.trim()) {
-    // Ensure URL has protocol
-    let fullImageUrl = imageUrl.trim();
-    if (fullImageUrl.startsWith('//')) {
-      fullImageUrl = 'https:' + fullImageUrl;
-    } else if (!fullImageUrl.startsWith('http://') && !fullImageUrl.startsWith('https://')) {
-      console.warn(`[ProductSet] Invalid image URL format: ${imageUrl}`);
-      fullImageUrl = '';
-    }
-    
-    if (fullImageUrl) {
-      console.log(`[ProductSet] Adding image: ${fullImageUrl}`);
-      productInput.media = [
-        {
-          originalSource: fullImageUrl,
-          mediaContentType: "IMAGE",
-          alt: title
-        }
-      ];
-    }
-  }
   
   const createResponse = await admin.graphql(PRODUCT_SET_MUTATION, {
     variables: {
@@ -266,6 +243,69 @@ export async function createTempProduct(
   }
   
   console.log(`[Success] ✅ Product created (temp-hidden)`);
+
+  // Add product image if available (separate mutation after product creation)
+  if (imageUrl && imageUrl.trim()) {
+    try {
+      // Ensure URL has protocol
+      let fullImageUrl = imageUrl.trim();
+      if (fullImageUrl.startsWith('//')) {
+        fullImageUrl = 'https:' + fullImageUrl;
+      }
+      
+      if (fullImageUrl.startsWith('http://') || fullImageUrl.startsWith('https://')) {
+        console.log(`[ProductMedia] Adding image: ${fullImageUrl}`);
+        
+        const PRODUCT_CREATE_MEDIA = `
+          mutation productCreateMedia($productId: ID!, $media: [CreateMediaInput!]!) {
+            productCreateMedia(productId: $productId, media: $media) {
+              media {
+                id
+                mediaContentType
+                alt
+                ... on MediaImage {
+                  image {
+                    url
+                  }
+                }
+              }
+              mediaUserErrors {
+                field
+                message
+              }
+            }
+          }
+        `;
+        
+        const mediaResponse = await admin.graphql(PRODUCT_CREATE_MEDIA, {
+          variables: {
+            productId: product.id,
+            media: [
+              {
+                originalSource: fullImageUrl,
+                mediaContentType: "IMAGE",
+                alt: title
+              }
+            ]
+          }
+        });
+        
+        const mediaResult = await mediaResponse.json();
+        
+        if (mediaResult.data?.productCreateMedia?.mediaUserErrors?.length > 0) {
+          const errors = mediaResult.data.productCreateMedia.mediaUserErrors;
+          console.error(`[ProductMedia] Error:`, errors);
+        } else {
+          console.log(`[ProductMedia] ✅ Image added successfully`);
+        }
+      } else {
+        console.warn(`[ProductMedia] Invalid image URL format: ${imageUrl}`);
+      }
+    } catch (error) {
+      console.error(`[ProductMedia] Failed to add image:`, error instanceof Error ? error.message : error);
+      // Don't throw - product is already created, image is optional
+    }
+  }
 
   // Ürünü Online Store'da yayına al (geçerli kanal). Hata olursa devam ediyoruz fakat published=false döneceğiz.
   let publishedProduct: any = null;
