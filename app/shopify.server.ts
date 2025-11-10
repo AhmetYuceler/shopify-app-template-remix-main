@@ -10,9 +10,15 @@ import prisma from "./db.server";
 // Derive appUrl from multiple environment variables so deployments don't crash
 // if SHOPIFY_APP_URL isn't explicitly set at runtime.
 function deriveAppUrl() {
+  // Prefer explicit app URLs, but consider HOST if it looks like a hostname (Railway sets RAILWAY_PUBLIC_DOMAIN)
+  const rawHost = process.env.HOST;
+  const isBadHost = (h?: string) =>
+    !h || /^(0\.0\.0\.0|127\.0\.0\.1|localhost|\d{1,3}(?:\.\d{1,3}){3})$/i.test(h);
+
   const candidates = [
     process.env.SHOPIFY_APP_URL,
     process.env.APP_URL,
+    !isBadHost(rawHost) ? rawHost : undefined,
     // Common PaaS envs
     process.env.RENDER_EXTERNAL_URL,
     process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined,
@@ -29,19 +35,28 @@ function deriveAppUrl() {
     url = `https://${url}`;
   }
   url = url.replace(/\/$/, "");
+
+  if (process.env.DEBUG_SHOPIFY_ENV === "true") {
+    // eslint-disable-next-line no-console
+    console.log("[shopify-app][env-debug] Resolved appUrl=", url || "<empty>");
+  }
+
   return url;
 }
 
 // Normalize and validate critical env vars with fallbacks to avoid misconfigurations
+// Railway variables might be injected differently; attempt multiple common names.
 const resolvedApiKey =
-  process.env.SHOPIFY_API_KEY ||
-  process.env.SHOPIFY_PUBLIC_API_KEY ||
+  process.env.SHOPIFY_API_KEY?.trim() ||
+  process.env.SHOPIFY_PUBLIC_API_KEY?.trim() ||
+  (process.env as any).API_KEY?.trim() || // fallback if user created generic key
   "";
 
 const resolvedApiSecret =
-  process.env.SHOPIFY_API_SECRET_KEY ||
-  (process.env as any).SHOPIFY_API_SECRET ||
-  (process.env as any).SHOPIFY_SECRET ||
+  process.env.SHOPIFY_API_SECRET_KEY?.trim() ||
+  (process.env as any).SHOPIFY_API_SECRET?.trim() ||
+  (process.env as any).SHOPIFY_SECRET?.trim() ||
+  (process.env as any).API_SECRET?.trim() || // generic fallback
   "";
 
 if (!resolvedApiKey || !resolvedApiSecret) {
