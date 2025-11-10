@@ -152,9 +152,6 @@ Tema düzeyinde ekstra koruma için `collection.liquid` ve `search.liquid` için
   {{ product.title }}
 {% endunless %}
 ```
-
-Eğer storefront'ta tamamen gizlemek istiyorsanız ve yalnızca custom form ile sepete atılmasını istiyorsanız ürün URL'sini kullanmak yerine form üzerinden doğrudan variant ID ile `/cart/add.js` yoluna POST edilebilir (mevcut akış bunu zaten yapıyor).
-
 ### Fiyatlama Kurallarını Değiştirme
 
 `app/utils/pricing.server.ts` dosyasını düzenleyin:
