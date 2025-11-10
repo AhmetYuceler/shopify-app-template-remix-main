@@ -1,0 +1,78 @@
+{{ 'tailwind.css' | asset_url | stylesheet_tag }}
+
+<div class="bg-gradient-to-r from-blue-500 to-purple-600 py-16">
+  <div class="container mx-auto px-4">
+    <div class="max-w-4xl mx-auto">
+      {%- comment -%} Test Başlık {%- endcomment -%}
+      <h1 class="text-5xl font-bold text-white text-center mb-8 animate-pulse">🎉 Tailwind CSS Çalışıyor! 🎉</h1>
+
+      {%- comment -%} Kart Listesi {%- endcomment -%}
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        {%- comment -%} Kart 1 {%- endcomment -%}
+        <div class="bg-white rounded-lg shadow-lg p-6 hover:shadow-2xl transition-shadow duration-300 transform hover:-translate-y-2">
+          <div class="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center mb-4">
+            <span class="text-white text-2xl font-bold">1</span>
+          </div>
+          <h3 class="text-xl font-bold text-gray-800 mb-2">Responsive</h3>
+          <p class="text-gray-600">Tüm ekran boyutlarında mükemmel görünür</p>
+        </div>
+
+        {%- comment -%} Kart 2 {%- endcomment -%}
+        <div class="bg-white rounded-lg shadow-lg p-6 hover:shadow-2xl transition-shadow duration-300 transform hover:-translate-y-2">
+          <div class="w-12 h-12 bg-purple-500 rounded-full flex items-center justify-center mb-4">
+            <span class="text-white text-2xl font-bold">2</span>
+          </div>
+          <h3 class="text-xl font-bold text-gray-800 mb-2">Hızlı</h3>
+          <p class="text-gray-600">Utility-first yaklaşımı ile hızlı geliştirme</p>
+        </div>
+
+        {%- comment -%} Kart 3 {%- endcomment -%}
+        <div class="bg-white rounded-lg shadow-lg p-6 hover:shadow-2xl transition-shadow duration-300 transform hover:-translate-y-2">
+          <div class="w-12 h-12 bg-pink-500 rounded-full flex items-center justify-center mb-4">
+            <span class="text-white text-2xl font-bold">3</span>
+          </div>
+          <h3 class="text-xl font-bold text-gray-800 mb-2">Özelleştirilebilir</h3>
+          <p class="text-gray-600">İstediğiniz gibi özelleştirin</p>
+        </div>
+      </div>
+
+      {%- comment -%} Butonlar {%- endcomment -%}
+      <div class="flex flex-wrap justify-center gap-4">
+        <button class="bg-white text-blue-600 font-bold py-3 px-8 rounded-full hover:bg-blue-50 transition-colors duration-300 shadow-lg">
+          Primary Button
+        </button>
+        <button class="bg-transparent border-2 border-white text-white font-bold py-3 px-8 rounded-full hover:bg-white hover:text-blue-600 transition-all duration-300">
+          Secondary Button
+        </button>
+      </div>
+
+      {%- comment -%} Badge'ler {%- endcomment -%}
+      <div class="flex flex-wrap justify-center gap-3 mt-8">
+        <span class="inline-flex items-center px-4 py-2 rounded-full text-sm font-semibold bg-green-100 text-green-800">
+          ✓ Kurulum Başarılı
+        </span>
+        <span class="inline-flex items-center px-4 py-2 rounded-full text-sm font-semibold bg-yellow-100 text-yellow-800">
+          ⚡ Hızlı
+        </span>
+        <span class="inline-flex items-center px-4 py-2 rounded-full text-sm font-semibold bg-red-100 text-red-800">
+          ❤️ Modern
+        </span>
+      </div>
+
+      {%- comment -%} Bilgi Kutusu {%- endcomment -%}
+      <div class="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 mt-8 rounded" role="alert">
+        <p class="font-bold">Tebrikler! 🎊</p>
+        <p>Tailwind CSS başarıyla kuruldu ve çalışıyor. Artık modern, responsive tasarımlar oluşturabilirsiniz.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% schema %}
+{
+  "name": "Tailwind Test Section",
+  "tag": "section",
+  "class": "section",
+  "settings": []
+}
+{% endschema %}

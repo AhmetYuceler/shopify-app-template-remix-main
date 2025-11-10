@@ -64,7 +64,41 @@ export async function action({ request }: ActionFunctionArgs) {
     const price = calculatePrice(height, width, material as MaterialType);
     const materialName = MATERIAL_NAMES[material as MaterialType];
     
-    // Shopify'da geçici ürün oluştur
+    // 1) Mevcut geçici ürün var mı? (2 saatlik TTL içinde, silinmemiş)
+    const existing = await db.tempProduct.findFirst({
+      where: {
+        shop: session.shop,
+        height,
+        width,
+        material,
+        deleted: false,
+        deleteAt: { gt: new Date() }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    if (existing) {
+      const existingTitle = `Özel Çerçeve ${height}×${width}mm - ${materialName}`;
+      console.log(`[ProxyTempProduct] Reuse existing: ${existing.productId}`);
+      return json(
+        {
+          success: true,
+          product: {
+            id: existing.id,
+            productId: existing.productId,
+            variantId: existing.variantId,
+            title: existingTitle,
+            price,
+            height,
+            width,
+            material: materialName
+          }
+        },
+        { headers: corsHeaders }
+      );
+    }
+
+    // 2) Yoksa Shopify'da geçici ürün oluştur
     const productData: TempProductData = {
       height,
       width,
@@ -72,16 +106,16 @@ export async function action({ request }: ActionFunctionArgs) {
       materialName,
       price
     };
-    
+
     const { productId, variantId, title } = await createTempProduct(
       admin,
       productData
     );
-    
-    // Veritabanına kaydet (2 saat sonra silinmek üzere)
+
+    // 3) Veritabanına kaydet (2 saat sonra silinmek üzere)
     const now = new Date();
     const deleteAt = new Date(now.getTime() + 2 * 60 * 60 * 1000);
-    
+
     const tempProduct = await db.tempProduct.create({
       data: {
         shop: session.shop,
@@ -94,9 +128,9 @@ export async function action({ request }: ActionFunctionArgs) {
         deleteAt
       }
     });
-    
+
     console.log(`[ProxyTempProduct] Oluşturuldu: ${productId} - ${title}`);
-    
+
     return json(
       {
         success: true,

@@ -119,40 +119,31 @@ export async function createTempProduct(
     <p><em>Not: Bu ürün özel siparişiniz için oluşturulmuştur.</em></p>
   `;
   
-  // Önce Online Store publication ID'sini bul
-  console.log('[Info] Fetching publications...');
-  
+  // Online Store publication ID'sini bul (publishablePublish için gerekli)
+  console.log('[Info] Fetching publications for Online Store publish...');
   const PUBLICATIONS_QUERY = `
     query {
       publications(first: 10) {
-        edges {
-          node {
-            id
-            name
-          }
-        }
+        edges { node { id name } }
       }
     }
   `;
-  
-  const pubsResponse = await admin.graphql(PUBLICATIONS_QUERY);
-  const pubsResult = await pubsResponse.json();
-  
-  console.log('[Publications] Available:', JSON.stringify(pubsResult.data?.publications?.edges, null, 2));
-  
-  // Online Store publication ID'sini bul
-  const publications = pubsResult.data?.publications?.edges || [];
-  const onlineStore = publications.find((edge: any) => edge.node.name === "Online Store");
-  
-  if (!onlineStore) {
-    console.error('[Error] Online Store publication not found!');
-    throw new Error("Online Store publication not found");
+  let onlineStoreId: string | null = null;
+  try {
+    const pubsResp = await admin.graphql(PUBLICATIONS_QUERY);
+    const pubsJson = await pubsResp.json();
+    const edges = pubsJson.data?.publications?.edges || [];
+    onlineStoreId = (edges.find((e: any) => e.node.name === 'Online Store')?.node?.id) || null;
+    if (!onlineStoreId) {
+      console.warn('[Publish] Online Store publication ID bulunamadı, publish denemesi atlanacak');
+    } else {
+      console.log('[Publish] Online Store publication ID:', onlineStoreId);
+    }
+  } catch (e) {
+    console.warn('[Publish] Publication sorgusu hata verdi:', e instanceof Error ? e.message : e);
   }
   
-  const onlineStoreId = onlineStore.node.id;
-  console.log('[Info] Using Online Store publication:', onlineStoreId);
-  
-  // productSet mutation ile ürünü oluştur
+  // productSet mutation ile ürünü oluştur (yayınlama ayrı adımda yapılacak)
   const PRODUCT_SET_MUTATION = `
     mutation productSet($input: ProductSetInput!, $synchronous: Boolean!) {
       productSet(input: $input, synchronous: $synchronous) {
@@ -185,8 +176,9 @@ export async function createTempProduct(
         descriptionHtml,
         productType: "Geçici Ürün",
         vendor: "Dinamik Fiyat Sistemi",
-        tags: ["temp-product", "auto-delete", `material-${material}`],
+        tags: ["temp-product", "temp-hidden", "auto-delete", `material-${material}`],
         status: "ACTIVE",
+        // Not: Yayınlama publishablePublish ile yapılacak
         productOptions: [
           {
             name: "Özelleştirme",
@@ -247,44 +239,54 @@ export async function createTempProduct(
     console.log(`[Success] Variant price set to: ${variantPrice} TL`);
   }
   
-  console.log(`[Success] ✅ Product created`);
+  console.log(`[Success] ✅ Product created (temp-hidden)`);
 
-  // Ürünü Online Store'da LISTED olarak yayınla
-  const PUBLISH_MUTATION = `
-    mutation PublishProductToOnlineStore($id: ID!, $publicationId: ID!) {
-      publishablePublish(id: $id, input: [{ publicationId: $publicationId }]) {
-        publishable {
-          ... on Product {
-            id
-            title
-            onlineStoreUrl
-            status
+  // Ürünü Online Store'da yayına al (geçerli kanal). Hata olursa devam ediyoruz fakat published=false döneceğiz.
+  let publishedProduct: any = null;
+  if (onlineStoreId) {
+    try {
+      // Ürünü Online Store'da LISTED olarak yayınla
+      const PUBLISH_MUTATION = `
+        mutation PublishProductToOnlineStore($id: ID!, $publicationId: ID!) {
+          publishablePublish(id: $id, input: [{ publicationId: $publicationId }]) {
+            publishable {
+              ... on Product {
+                id
+                title
+                onlineStoreUrl
+                status
+              }
+            }
+            userErrors { field message }
           }
         }
-        userErrors { field message }
+      `;
+
+      const publishResp = await admin.graphql(PUBLISH_MUTATION, {
+        variables: {
+          id: product.id,
+          publicationId: onlineStoreId
+        }
+      });
+      const publishResult = await publishResp.json();
+      console.log(`[Publish Debug]`, JSON.stringify(publishResult, null, 2));
+
+      const pubErrors = publishResult.data?.publishablePublish?.userErrors || [];
+      if (pubErrors.length > 0) {
+        throw new Error(`Yayınlama hatası: ${pubErrors.map((e: any) => `${e.field}: ${e.message}`).join(', ')}`);
       }
+
+      publishedProduct = publishResult.data?.publishablePublish?.publishable;
+      if (!publishedProduct) {
+        console.warn(`[Publish Warning] publishablePublish sonucu beklenen ürünü döndürmedi.`);
+      } else {
+        console.log(`[Publish Success] ✅ Product published to Online Store (LISTED)`);
+      }
+    } catch (e) {
+      // Yayınlama hatasında detaylı hata ver, üst katmana taşı
+      if (e instanceof Error) throw e;
+      throw new Error('Yayınlama hatası');
     }
-  `;
-
-  const publishResp = await admin.graphql(PUBLISH_MUTATION, {
-    variables: {
-      id: product.id,
-      publicationId: onlineStoreId
-    }
-  });
-  const publishResult = await publishResp.json();
-  console.log(`[Publish Debug]`, JSON.stringify(publishResult, null, 2));
-
-  const pubErrors = publishResult.data?.publishablePublish?.userErrors || [];
-  if (pubErrors.length > 0) {
-    throw new Error(`Yayınlama hatası: ${pubErrors.map((e: any) => `${e.field}: ${e.message}`).join(', ')}`);
-  }
-
-  const publishedProduct = publishResult.data?.publishablePublish?.publishable;
-  if (!publishedProduct) {
-    console.warn(`[Publish Warning] publishablePublish sonucu beklenen ürünü döndürmedi.`);
-  } else {
-    console.log(`[Publish Success] ✅ Product published to Online Store (LISTED)`);
   }
   
   return {

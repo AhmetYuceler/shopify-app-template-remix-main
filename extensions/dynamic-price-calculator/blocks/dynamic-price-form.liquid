@@ -8,7 +8,12 @@
   bilgilerini alır ve dinamik fiyat hesaplar.
 {% endcomment %}
 
-<div class="dynamic-price-calculator" data-product-id="{{ product.id }}">
+<div 
+  class="dynamic-price-calculator" 
+  data-product-id="{{ product.id }}"
+  data-section-cart-drawer="{{ block.settings.cart_drawer_section_id | default: 'cart-drawer' }}"
+  data-section-cart-icon="{{ block.settings.cart_icon_section_id | default: 'cart-icon-bubble' }}"
+>
   <div class="calculator-form">
     <h3 class="calculator-title">{{ block.settings.title }}</h3>
     <p class="calculator-description">{{ block.settings.description }}</p>
@@ -83,20 +88,6 @@
         id="calculate-price-btn"
       >
         <span class="btn-text">Fiyat Hesapla</span>
-      </button>
-      
-      {%- comment -%} Ürün oluştur butonu {%- endcomment -%}
-      <button 
-        type="button" 
-        class="create-product-btn" 
-        id="create-product-btn"
-        style="display: none;"
-      >
-        <span class="btn-text">Ürün Oluştur</span>
-        <span class="btn-loader" style="display: none;">
-          <span class="spinner"></span>
-          Oluşturuluyor...
-        </span>
       </button>
       
       {%- comment -%} Sepete ekle butonu (ürün oluştuktan sonra gösterilecek) {%- endcomment -%}
@@ -324,6 +315,11 @@
 {%- comment -%} JavaScript {%- endcomment -%}
 <script>
 (function() {
+  const container = document.querySelector('.dynamic-price-calculator');
+  const DRAWER_SECTION_ID = container?.dataset.sectionCartDrawer || 'cart-drawer';
+  const ICON_SECTION_ID = container?.dataset.sectionCartIcon || 'cart-icon-bubble';
+  // Bazı temalarda cart-notification kullanılır; varsa onu da hedefle
+  const NOTIFICATION_SECTION_ID = (document.getElementById('shopify-section-cart-notification') ? 'cart-notification' : null);
   const form = document.getElementById('dynamic-price-form');
   const heightInput = document.getElementById('height-input');
   const widthInput = document.getElementById('width-input');
@@ -333,7 +329,6 @@
   const priceDetails = document.getElementById('price-details');
   
   const calculateBtn = document.getElementById('calculate-price-btn');
-  const createProductBtn = document.getElementById('create-product-btn');
   const addToCartBtn = document.getElementById('add-to-cart-btn');
   
   const errorMessage = document.getElementById('error-message');
@@ -341,6 +336,7 @@
   const infoMessage = document.getElementById('info-message');
   
   let createdProduct = null; // Oluşturulan ürün bilgisi
+  let isAddingToCart = false; // Çift tıklama / paralel ekleme koruması
   
   // 1. ADIM: Fiyat Hesapla
   calculateBtn.addEventListener('click', async () => {
@@ -360,7 +356,7 @@
     }
     
     calculateBtn.disabled = true;
-    calculateBtn.textContent = 'Hesaplanıyor...';
+    calculateBtn.textContent = 'Hazırlanıyor...';
     hideError();
     hideSuccess();
     hideInfo();
@@ -386,8 +382,30 @@
           Materyal: ${data.calculation.material}
         `;
         priceDisplay.style.display = 'block';
-        createProductBtn.style.display = 'block';
         hideError();
+
+        // calculate-price artık product payload da döndürüyor
+        if (data.product) {
+          createdProduct = data.product;
+          addToCartBtn.style.display = 'block';
+          addToCartBtn.disabled = false;
+        } else {
+          // Her ihtimale karşı fallback olarak create-temp-product'a gider
+          const createFormData = new FormData();
+          createFormData.append('height', height);
+          createFormData.append('width', width);
+          createFormData.append('material', material);
+          const createResp = await fetch('/apps/proxy/create-temp-product', {
+            method: 'POST',
+            body: createFormData
+          });
+          const createData = await createResp.json();
+          if (createData.success && createData.product) {
+            createdProduct = createData.product;
+            addToCartBtn.style.display = 'block';
+            addToCartBtn.disabled = false;
+          }
+        }
       } else {
         showError(data.error);
       }
@@ -400,129 +418,134 @@
     }
   });
   
-  // 2. ADIM: Ürün Oluştur
-  createProductBtn.addEventListener('click', async () => {
-    const height = parseInt(heightInput.value);
-    const width = parseInt(widthInput.value);
-    const material = materialSelect.value;
-    
-    createProductBtn.disabled = true;
-    createProductBtn.querySelector('.btn-text').style.display = 'none';
-    createProductBtn.querySelector('.btn-loader').style.display = 'flex';
-    hideError();
-    hideSuccess();
-    hideInfo();
-    
-    try {
-      const formData = new FormData();
-      formData.append('height', height);
-      formData.append('width', width);
-      formData.append('material', material);
-      
-      const response = await fetch('/apps/proxy/create-temp-product', {
-        method: 'POST',
-        body: formData
-      });
-      
-      const data = await response.json();
-      console.log('[DEBUG] Backend response:', data);
-      
-      if (data.success && data.product) {
-        createdProduct = data.product;
-        console.log('[SUCCESS] Product created:', createdProduct);
-        
-        // Ürün oluşturuldu mesajı göster
-        createProductBtn.style.display = 'none';
-        addToCartBtn.style.display = 'block';
-        addToCartBtn.disabled = true;
-        
-        // 5 saniye geri sayım (Ürün publish edildiği için kısa sürede hazır)
-        let countdown = 5;
-        showInfo(`✓ Ürün oluşturuldu ve yayınlandı! Sepete eklemek için ${countdown} saniye bekleyin...`);
-        
-        const countdownInterval = setInterval(() => {
-          countdown--;
-          if (countdown > 0) {
-            showInfo(`✓ Ürün oluşturuldu ve yayınlandı! Sepete eklemek için ${countdown} saniye bekleyin...`);
-          } else {
-            clearInterval(countdownInterval);
-            addToCartBtn.disabled = false;
-            showInfo(`✓ Ürün hazır! Şimdi "Sepete Ekle" butonuna tıklayabilirsiniz.`);
-          }
-        }, 1000);
-      } else {
-        showError(data.error || 'Ürün oluşturulamadı');
-      }
-    } catch (error) {
-      console.error('[ERROR] Ürün oluşturma:', error);
-      showError('Ürün oluşturulamadı');
-    } finally {
-      createProductBtn.disabled = false;
-      createProductBtn.querySelector('.btn-text').style.display = 'inline';
-      createProductBtn.querySelector('.btn-loader').style.display = 'none';
-    }
-  });
-  
   // 3. ADIM: Sepete Ekle
   addToCartBtn.addEventListener('click', async () => {
+    if (isAddingToCart) return; // zaten çalışıyor
     if (!createdProduct) {
       showError('Önce ürün oluşturmalısınız');
       return;
     }
-    
+
+    isAddingToCart = true;
     addToCartBtn.disabled = true;
     addToCartBtn.querySelector('.btn-text').style.display = 'none';
     addToCartBtn.querySelector('.btn-loader').style.display = 'flex';
-    hideError();
-    hideSuccess();
-    hideInfo();
-    
-    try {
-      console.log('[INFO] Adding to cart, variant ID:', createdProduct.variantId);
-      
-      const cartResponse = await fetch('/cart/add.js', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          id: createdProduct.variantId,
-          quantity: 1,
-          properties: {
-            'Boyut': `${createdProduct.height}×${createdProduct.width}mm`,
-            'Materyal': createdProduct.material,
-            'Özel Fiyat': `${createdProduct.price} TL`
+    hideError(); hideSuccess(); hideInfo();
+
+    const MAX_RETRIES = 7;
+    const RETRY_INTERVAL = 700; // ms
+
+    const attemptAdd = async (tryIndex = 0) => {
+      console.log(`[CartAttempt] Deneme ${tryIndex+1}/${MAX_RETRIES}`);
+      try {
+        const resp = await fetch('/cart/add.js', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: createdProduct.variantId,
+            quantity: 1,
+            properties: {
+              'Boyut': `${createdProduct.height}×${createdProduct.width}mm`,
+              'Materyal': createdProduct.material,
+              'Özel Fiyat': `${createdProduct.price} TL`
+            },
+            // Dawn ve türevleri: response içine section HTML'lerini dahil et
+            sections: [ICON_SECTION_ID, DRAWER_SECTION_ID, NOTIFICATION_SECTION_ID].filter(Boolean),
+            sections_url: window.location.pathname
+          })
+        });
+        if (resp.ok) {
+          const data = await resp.json();
+          console.log('[SUCCESS] Added to cart:', data);
+          
+          // Temanın drawer/cart mekanizmasını tetikle - sections DOM replace yerine custom events
+          try {
+            // 1) Response'dan sections geldiyse replaceSectionsHtml uygula
+            if (data?.sections && typeof data.sections === 'object') {
+              replaceSectionsHtml(data.sections);
+            }
+            
+            // 2) Cart güncellemesi için /cart.js fetch et ve global publish et
+            const cartResp = await fetch('/cart.js');
+            if (cartResp.ok) {
+              const cartData = await cartResp.json();
+              // Tema dinleyebilir: cart:updated, cart:refresh, theme:cart:update gibi
+              document.documentElement.dispatchEvent(new CustomEvent('cart:refresh', { 
+                bubbles: true, 
+                detail: { cart: cartData } 
+              }));
+            }
+            
+            // 3) Cart drawer'ı aç - farklı tema patternları dene
+            setTimeout(() => {
+              // Dawn theme pattern
+              const drawerEl = document.querySelector('cart-drawer');
+              if (drawerEl) {
+                if (typeof drawerEl.open === 'function') {
+                  drawerEl.open();
+                } else if (typeof drawerEl.renderContents === 'function') {
+                  drawerEl.renderContents(data).then(() => drawerEl.open?.());
+                }
+              }
+              
+              // Diğer temalar için genel click/toggle
+              const drawerToggle = document.querySelector('[data-cart-drawer-toggle]') || 
+                                 document.querySelector('.cart-drawer__toggle') ||
+                                 document.querySelector('#cart-icon-bubble');
+              if (drawerToggle && !drawerEl) {
+                drawerToggle.click();
+              }
+              
+              // Fallback: custom event
+              document.dispatchEvent(new CustomEvent('cart:open', { bubbles: true }));
+            }, 100);
+            
+          } catch (e) {
+            console.warn('[WARN] Cart refresh flow failed', e);
           }
-        })
-      });
-      
-      if (cartResponse.ok) {
-        const cartData = await cartResponse.json();
-        console.log('[SUCCESS] Added to cart:', cartData);
-        showSuccess('✓ Ürün sepete eklendi!');
-        
-        // Formu sıfırla
-        setTimeout(() => {
-          resetForm();
-        }, 2000);
-      } else {
-        const errorData = await cartResponse.json().catch(() => ({}));
-        console.warn('[WARNING] Cart add failed:', errorData);
-        
-        if (errorData.description === 'Cannot find variant') {
-          showError('⏳ Ürün hala hazırlanıyor. Lütfen 20-30 saniye daha bekleyip tekrar "Sepete Ekle" butonuna tıklayın. (Shopify\'ın indexing süreci uzun sürebilir)');
+          
+          showSuccess('Ürün sepete eklendi!');
+          
+          // Başarılı olduğunda butonu pasif bırak ve metni değiştir
+          addToCartBtn.querySelector('.btn-loader').style.display = 'none';
+          addToCartBtn.querySelector('.btn-text').style.display = 'inline';
+          addToCartBtn.querySelector('.btn-text').textContent = 'Sepete Eklendi';
+          addToCartBtn.disabled = true;
+          isAddingToCart = false;
+          setTimeout(resetForm, 1600);
+          return;
         } else {
-          showError('Sepete eklenemedi. Lütfen tekrar deneyin.');
+          const err = await resp.json().catch(() => ({}));
+          if (err?.description === 'Cannot find variant') {
+            if (tryIndex < MAX_RETRIES - 1) {
+              showInfo('Ürün hazırlanıyor… Sepete eklenmesi için birkaç saniye bekleniyor.');
+              return setTimeout(() => attemptAdd(tryIndex + 1), RETRY_INTERVAL);
+            } else {
+              showError('Ürün henüz hazır değil. Lütfen ölçüleri yeniden girip tekrar deneyin.');
+            }
+          } else {
+            showError('Sepete eklenemedi. Lütfen tekrar deneyin.');
+          }
+        }
+      } catch (e) {
+        console.error('[ERROR] Cart add attempt failed:', e);
+        if (tryIndex < MAX_RETRIES - 1) {
+          showInfo('Bağlantı sorunu… Yeniden deneniyor.');
+          return setTimeout(() => attemptAdd(tryIndex + 1), RETRY_INTERVAL);
+        }
+        showError('İşlem başarısız. Lütfen tekrar deneyin.');
+      } finally {
+        // Başarıya kadar loader açık kalsın; başarısız son durumda butonu yeniden etkinleştir
+        if (successMessage.style.display !== 'block') {
+          addToCartBtn.querySelector('.btn-loader').style.display = 'none';
+          addToCartBtn.querySelector('.btn-text').style.display = 'inline';
+          addToCartBtn.disabled = false;
+          isAddingToCart = false;
         }
       }
-    } catch (error) {
-      console.error('[ERROR] Cart add:', error);
-      showError('Sepete eklenemedi. Lütfen tekrar deneyin.');
-    } finally {
-      addToCartBtn.disabled = false;
-      addToCartBtn.querySelector('.btn-text').style.display = 'inline';
-      addToCartBtn.querySelector('.btn-loader').style.display = 'none';
-    }
+    };
+
+    attemptAdd(0);
   });
   
   // Yardımcı fonksiyonlar
@@ -560,12 +583,110 @@
     widthInput.value = '';
     materialSelect.value = '';
     priceDisplay.style.display = 'none';
-    createProductBtn.style.display = 'none';
     addToCartBtn.style.display = 'none';
     createdProduct = null;
+    isAddingToCart = false;
     hideError();
     hideSuccess();
     hideInfo();
+  }
+
+  // Server'dan dönen sections HTML haritasını uygun section container'larına uygular
+  function replaceSectionsHtml(sectionsMap) {
+    if (!sectionsMap) return;
+    const sectionIds = [ICON_SECTION_ID, DRAWER_SECTION_ID, NOTIFICATION_SECTION_ID].filter(Boolean);
+    sectionIds.forEach((sid) => {
+      const html = sectionsMap[sid];
+      if (!html) return;
+      const containerId = `shopify-section-${sid}`;
+      const container = document.getElementById(containerId);
+      if (!container) return;
+      const wrapper = document.createElement('div');
+      wrapper.innerHTML = html;
+      const nextEl = wrapper.firstElementChild;
+      if (nextEl && nextEl.id === containerId) {
+        container.replaceWith(nextEl);
+      } else {
+        container.innerHTML = html;
+      }
+    });
+  }
+
+  /**
+   * Sepet sayacı ve drawer bölümünü günceller
+   * Katmanlar:
+   * 1) /cart.js ile item_count al ve yaygın seçicileri güncelle
+   * 2) sections endpoint ile fallback güncelleme
+   * 3) Custom event yayınla
+   */
+  async function updateCartUI(addedResponseData) {
+    // 1) /cart.js'den güncel sepet
+    let cartJson;
+    try {
+      const r = await fetch('/cart.js');
+      if (r.ok) {
+        cartJson = await r.json();
+      }
+    } catch (e) {
+      console.warn('[Cart] /cart.js fetch failed', e);
+    }
+    const itemCount = cartJson?.item_count ?? (addedResponseData?.items?.length ? addedResponseData.items.reduce((a,i)=>a + (i.quantity||0),0) : undefined);
+    if (typeof itemCount === 'number') {
+      const selectors = [
+        '[data-cart-count]',
+        '#cart-count',
+        '.cart-count-bubble .count',
+        '.cart-count-bubble[data-cart-count-bubble]',
+        '.header__icon--cart .cart-count-bubble',
+      ];
+      const unique = new Set();
+      selectors.forEach(sel => {
+        document.querySelectorAll(sel).forEach(el => unique.add(el));
+      });
+      unique.forEach(el => {
+        const inner = el.querySelector?.('.count') || el;
+        inner.textContent = itemCount.toString();
+        el.classList?.toggle('hidden', itemCount === 0);
+      });
+    }
+
+    // 2) Dawn ve benzeri temalarda sections-rendering API ile sepet ikonunu ve çekmeceyi tazele (fallback)
+    try {
+      const sectionsToRender = [ICON_SECTION_ID, DRAWER_SECTION_ID].filter(Boolean);
+      if (sectionsToRender.length) {
+        const url = `/?sections=${encodeURIComponent(sectionsToRender.join(','))}`;
+        const res = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+        if (res.ok) {
+          const sectionsHtml = await res.json();
+          sectionsToRender.forEach((sid) => {
+            const html = sectionsHtml?.[sid];
+            if (!html) return;
+            const containerId = `shopify-section-${sid}`;
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            const wrapper = document.createElement('div');
+            wrapper.innerHTML = html;
+            const nextEl = wrapper.firstElementChild;
+            if (nextEl && nextEl.id === containerId) {
+              container.replaceWith(nextEl);
+            } else {
+              // Bazı temalarda JSON direkt section içeriği dönebilir
+              container.innerHTML = html;
+            }
+          });
+        }
+      }
+    } catch (e) {
+      console.warn('[Cart] sections render failed', e);
+    }
+
+    // 3) Custom event (tema dinleyebilir)
+    try {
+      const event = new CustomEvent('cart:refresh', { detail: { cart: cartJson } });
+      document.dispatchEvent(event);
+    } catch (e) {
+      /* ignore */
+    }
   }
 })();
 </script>
@@ -585,6 +706,20 @@
       "id": "description",
       "label": "Açıklama",
       "default": "Ürününüzün boy, en ve materyal bilgilerini girerek özel fiyatınızı hesaplayın."
+    },
+    {
+      "type": "text",
+      "id": "cart_drawer_section_id",
+      "label": "Cart Drawer Section ID",
+      "default": "cart-drawer",
+      "info": "Temanızdaki sepet çekmecesi section ID'si (Örn: cart-drawer)."
+    },
+    {
+      "type": "text",
+      "id": "cart_icon_section_id",
+      "label": "Cart Icon/Bubble Section ID",
+      "default": "cart-icon-bubble",
+      "info": "Temanızdaki sepet simgesi/sayaç section ID'si (Örn: cart-icon-bubble)."
     }
   ]
 }

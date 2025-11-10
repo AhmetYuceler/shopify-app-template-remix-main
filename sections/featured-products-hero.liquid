@@ -1,0 +1,480 @@
+{{ 'tailwind-output.css' | asset_url | stylesheet_tag }}
+{{ 'component-card.css' | asset_url | stylesheet_tag }}
+{{ 'component-swatch.css' | asset_url | stylesheet_tag }}
+
+<div class="relative w-full bg-white" id="featured-products-hero-{{ section.id }}">
+  <div class="flex flex-col lg:flex-row lg:min-h-[600px]">
+    {%- comment -%} Sol Taraf - Hero Görseli (720px sabit genişlik, sola yaslanmış) {%- endcomment -%}
+    <div class="w-full lg:w-[720px] flex-shrink-0 relative">
+      {%- if section.settings.hero_image != blank -%}
+        <img
+          src="{{ section.settings.hero_image | image_url: width: 720 }}"
+          srcset="
+            {{ section.settings.hero_image | image_url: width: 360 }} 360w,
+            {{ section.settings.hero_image | image_url: width: 720 }} 720w
+          "
+          sizes="(max-width: 1023px) 100vw, 720px"
+          alt="{{ section.settings.hero_image.alt | escape }}"
+          loading="lazy"
+          width="720"
+          height="{{ section.settings.hero_image.height | times: 720 | divided_by: section.settings.hero_image.width }}"
+          class="w-full h-auto min-h-[400px] md:min-h-[500px] lg:min-h-[600px] object-cover"
+        >
+      {%- else -%}
+        <div class="w-full min-h-[400px] md:min-h-[500px] lg:min-h-[600px] bg-gray-100 flex flex-col items-center justify-center gap-4">
+          <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="64" height="64" rx="8" fill="#E5E7EB"/>
+            <path d="M24 28L32 36L40 28M20 44H44C44.8284 44 45.5 43.3284 45.5 42.5V21.5C45.5 20.6716 44.8284 20 44 20H20C19.1716 20 18.5 20.6716 18.5 21.5V42.5C18.5 43.3284 19.1716 44 20 44Z" stroke="#9CA3AF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <div class="text-center">
+            <span class="text-gray-500 text-sm font-medium block">Hero Görseli Ekle</span>
+            <span class="text-gray-400 text-xs">720 x 600px önerilir</span>
+          </div>
+        </div>
+      {%- endif -%}
+    </div>
+
+    {%- comment -%} Sağ Taraf - İçerik Alanı {%- endcomment -%}
+    <div class="flex-1 md:px-8 lg:px-20 xl:px-32 py-8 lg:py-24 lg:pt-36 flex items-center justify-center px-6 overflow-hidden w-full">
+      <div class="w-full md:px-0 max-w-full md:max-w-[650px]">
+        {%- comment -%} Üst Kısım - Başlık, Açıklama, Buton {%- endcomment -%}
+        <div class="mb-8 md:mb-12">
+          {%- comment -%} Başlık {%- endcomment -%}
+          {%- if section.settings.heading != blank -%}
+            <h2
+              class="font-avant-garde font-bold text-[20px] md:text-[31.25px] leading-[130%] text-black mb-4 md:mb-6 max-w-[312px] md:max-w-[494px]"
+            >
+              {{ section.settings.heading }}
+            </h2>
+          {%- endif -%}
+
+          {%- comment -%} Alt Başlık {%- endcomment -%}
+          {%- if section.settings.subheading != blank -%}
+            <p
+              class="text-[16px] leading-[160%] text-[#666666] mb-8 max-w-[494px]"
+            >
+              {{ section.settings.subheading }}
+            </p>
+          {%- endif -%}
+
+          {%- comment -%} Buton {%- endcomment -%}
+          {%- if section.settings.button_label != blank -%}
+            <a
+              href="{{ section.settings.button_link | default: '#' }}"
+              class="font-avenir inline-block text-[12.8px] text-black font-semibold border-b-2 border-black pb-1 hover:opacity-70 transition-opacity"
+            >
+              {{ section.settings.button_label }}
+            </a>
+          {%- endif -%}
+        </div>
+
+        {%- comment -%} Alt Kısım - Ürün Slider (2.5 ürün görünür) {%- endcomment -%}
+        {%- if section.blocks.size > 0 -%}
+          <div class="relative">
+            {%- comment -%} Admin panelinde ürün seçilmediğinde bilgi mesajı {%- endcomment -%}
+            {%- assign has_products = false -%}
+            {%- for block in section.blocks -%}
+              {%- if block.settings.product != blank -%}
+                {%- assign has_products = true -%}
+                {%- break -%}
+              {%- endif -%}
+            {%- endfor -%}
+
+            {%- unless has_products -%}
+              <div class="mb-3 p-3 bg-blue-50 border border-blue-200 rounded text-left max-w-[400px]">
+                <p class="text-xs text-blue-800"><strong>💡 İpucu:</strong> Ürün bloklarından ürünlerinizi seçin.</p>
+              </div>
+            {%- endunless -%}
+            {%- comment -%} Ürün Kartları Container - Mobilde tüm genişlik, Desktop 2.5 ürün genişliği (230*2.5 + gap*2 = 591px) {%- endcomment -%}
+            <div class="relative overflow-hidden w-full md:max-w-[607px]">
+              <div
+                class="flex gap-7 md:gap-12 overflow-x-auto scrollbar-hide cursor-grab active:cursor-grabbing"
+                id="product-slider-{{ section.id }}"
+                style="-webkit-overflow-scrolling: touch; touch-action: pan-x; overscroll-behavior-x: contain; scrollbar-width: none; -ms-overflow-style: none;"
+              >
+                {%- for block in section.blocks -%}
+                  {%- case block.type -%}
+                    {%- when 'product' -%}
+                      {%- assign product = block.settings.product -%}
+                      {%- if product != blank -%}
+                        <div
+                          class="flex-none product-card-draggable w-[148px] md:w-[230px]"
+                          {{ block.shopify_attributes }}
+                        >
+                          {%- render 'product-card-hero',
+                            product: product,
+                            show_vendor: section.settings.show_vendor,
+                            show_rating: section.settings.show_rating,
+                            block_id: block.id
+                          -%}
+                        </div>
+                      {%- endif -%}
+                  {%- endcase -%}
+                {%- endfor -%}
+              </div>
+            </div>
+
+            {%- comment -%} Sol Ok Butonu - Sadece Desktop {%- endcomment -%}
+            {%- if section.blocks.size > 2 -%}
+              <button
+                class="absolute top-1/2 -translate-y-1/2 w-10 h-10 z-10 hero-slider-prev-{{ section.id }} transition-opacity duration-300 left-[10px]"
+                aria-label="Previous products"
+                style="opacity: 0; pointer-events: none; display: none;"
+              >
+                <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="0.5" y="0.5" width="39" height="39" stroke="black" stroke-opacity="0.1"/>
+                  <path fill-rule="evenodd" clip-rule="evenodd" d="M23.3536 13.6464C23.1583 13.4512 22.8417 13.4512 22.6464 13.6464L16.6464 19.6464C16.4512 19.8417 16.4512 20.1583 16.6464 20.3536L22.6464 26.3536C22.8417 26.5488 23.1583 26.5488 23.3536 26.3536C23.5488 26.1583 23.5488 25.8417 23.3536 25.6464L17.7071 20L23.3536 14.3536C23.5488 14.1583 23.5488 13.8417 23.3536 13.6464Z" fill="black"/>
+                </svg>
+              </button>
+            {%- endif -%}
+
+            {%- comment -%} Sağ Ok Butonu - Sadece Desktop, 2. ürünün tam üstünde {%- endcomment -%}
+            {%- if section.blocks.size > 2 -%}
+              <button
+                class="absolute top-1/2 -translate-y-1/2 w-10 h-10 z-10 hero-slider-next-{{ section.id }} transition-opacity duration-300 right-[120px]"
+                aria-label="Next products"
+                style="opacity: 1; pointer-events: auto; display: none;"
+              >
+                <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="0.5" y="0.5" width="39" height="39" stroke="black" stroke-opacity="0.1"/>
+                  <path fill-rule="evenodd" clip-rule="evenodd" d="M16.6464 13.6464C16.8417 13.4512 17.1583 13.4512 17.3536 13.6464L23.3536 19.6464C23.5488 19.8417 23.5488 20.1583 23.3536 20.3536L17.3536 26.3536C17.1583 26.5488 16.8417 26.5488 16.6464 26.3536C16.4512 26.1583 16.4512 25.8417 16.6464 25.6464L22.2929 20L16.6464 14.3536C16.4512 14.1583 16.4512 13.8417 16.6464 13.6464Z" fill="black"/>
+                </svg>
+              </button>
+            {%- endif -%}
+          </div>
+        {%- else -%}
+          {%- comment -%} Hiç ürün bloğu yoksa {%- endcomment -%}
+          <div class="p-4 bg-gray-50 border border-dashed border-gray-300 rounded text-center max-w-[400px]">
+            <svg
+              class="mx-auto mb-2"
+              width="32"
+              height="32"
+              viewBox="0 0 32 32"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <rect width="32" height="32" rx="16" fill="#E5E7EB"/>
+              <path d="M16 12V20M12 16H20" stroke="#9CA3AF" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+            <p class="text-xs font-medium text-gray-600 mb-0.5">Henüz ürün eklenmedi</p>
+            <p class="text-xs text-gray-500">Sol panelden ürün bloğu ekleyin</p>
+          </div>
+        {%- endif -%}
+      </div>
+    </div>
+  </div>
+</div>
+
+{%- comment -%} Slider Navigation & Drag-to-Scroll JavaScript {%- endcomment -%}
+<script>
+  (function () {
+    const sectionId = '{{ section.id }}';
+    const slider = document.getElementById('product-slider-' + sectionId);
+    const nextBtn = document.querySelector('.hero-slider-next-' + sectionId);
+    const prevBtn = document.querySelector('.hero-slider-prev-' + sectionId);
+
+    // Masaüstünde butonları göster (768px+)
+    function checkScreenSize() {
+      if (!prevBtn || !nextBtn) return;
+
+      if (window.innerWidth >= 768) {
+        prevBtn.style.display = 'block';
+        nextBtn.style.display = 'block';
+      } else {
+        prevBtn.style.display = 'none';
+        nextBtn.style.display = 'none';
+      }
+    }
+
+    // Sayfa yüklendiğinde ve resize olduğunda kontrol et
+    checkScreenSize();
+    window.addEventListener('resize', checkScreenSize);
+
+    // Ok butonlarının görünürlüğünü güncelle
+    function updateNavButtons() {
+      if (!slider || !prevBtn || !nextBtn) return;
+      if (window.innerWidth < 768) return; // Mobilde çalışmasın
+
+      const scrollLeft = slider.scrollLeft;
+      const maxScroll = slider.scrollWidth - slider.clientWidth;
+
+      // Sol ok - başta değilse göster
+      if (scrollLeft <= 5) {
+        prevBtn.style.opacity = '0';
+        prevBtn.style.pointerEvents = 'none';
+      } else {
+        prevBtn.style.opacity = '1';
+        prevBtn.style.pointerEvents = 'auto';
+      }
+
+      // Sağ ok - sonda değilse göster
+      if (scrollLeft >= maxScroll - 5) {
+        nextBtn.style.opacity = '0';
+        nextBtn.style.pointerEvents = 'none';
+      } else {
+        nextBtn.style.opacity = '1';
+        nextBtn.style.pointerEvents = 'auto';
+      }
+    }
+
+    // Ok butonları tıklama
+    if (nextBtn && slider) {
+      nextBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        slider.scrollBy({ left: 234, behavior: 'smooth' }); // 230px (ürün) + 4px (gap yarısı)
+        setTimeout(updateNavButtons, 300); // Smooth scroll tamamlandıktan sonra güncelle
+      });
+    }
+
+    if (prevBtn && slider) {
+      prevBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        slider.scrollBy({ left: -234, behavior: 'smooth' }); // Sola kaydır
+        setTimeout(updateNavButtons, 300);
+      });
+    }
+
+    // Scroll event'inde ok butonlarını güncelle
+    if (slider) {
+      slider.addEventListener('scroll', updateNavButtons);
+      // İlk yüklemede kontrol et
+      updateNavButtons();
+    }
+
+    // Mouse ile sürükleme (drag-to-scroll)
+    if (slider) {
+      let isMouseDown = false;
+      let startX;
+      let scrollLeftStart;
+      let hasDragged = false;
+
+      // Mousedown event
+      slider.addEventListener('mousedown', function (e) {
+        // Butonlara ve swatch'lere tıklanıyorsa dön
+        if (
+          e.target.closest('button') ||
+          e.target.closest('.hero-slider-next-' + sectionId) ||
+          e.target.closest('.hero-slider-prev-' + sectionId)
+        ) {
+          return;
+        }
+
+        isMouseDown = true;
+        hasDragged = false;
+        slider.classList.add('cursor-grabbing');
+        slider.classList.remove('cursor-grab');
+        startX = e.pageX;
+        scrollLeftStart = slider.scrollLeft;
+
+        // Drag sırasında text selection'ı engelle
+        e.preventDefault();
+      });
+
+      // Mouseleave event
+      slider.addEventListener('mouseleave', function () {
+        isMouseDown = false;
+        slider.classList.remove('cursor-grabbing');
+        slider.classList.add('cursor-grab');
+      });
+
+      // Mouseup event - global
+      document.addEventListener('mouseup', function () {
+        if (isMouseDown) {
+          isMouseDown = false;
+          slider.classList.remove('cursor-grabbing');
+          slider.classList.add('cursor-grab');
+
+          // Kısa süre sonra hasDragged'i sıfırla
+          setTimeout(function () {
+            hasDragged = false;
+          }, 100);
+        }
+      });
+
+      // Mousemove event - global
+      document.addEventListener('mousemove', function (e) {
+        if (!isMouseDown) return;
+
+        e.preventDefault();
+
+        const x = e.pageX;
+        const distance = x - startX;
+
+        // 3 piksel üzeri hareket varsa drag olarak say
+        if (Math.abs(distance) > 3) {
+          hasDragged = true;
+        }
+
+        // Scroll pozisyonunu güncelle
+        slider.scrollLeft = scrollLeftStart - distance;
+      });
+
+      // Touch events için mobil destek
+      let touchStartX = 0;
+      let touchStartY = 0;
+      let touchHasMoved = false;
+      let isTouchScrolling = false;
+
+      slider.addEventListener(
+        'touchstart',
+        function (e) {
+          // Butonlara dokunuluyorsa dön
+          if (e.target.closest('button')) {
+            return;
+          }
+          touchStartX = e.touches[0].pageX;
+          touchStartY = e.touches[0].pageY;
+          touchHasMoved = false;
+          isTouchScrolling = false;
+        },
+        { passive: true }
+      );
+
+      slider.addEventListener(
+        'touchmove',
+        function (e) {
+          const x = e.touches[0].pageX;
+          const y = e.touches[0].pageY;
+          const distanceX = Math.abs(x - touchStartX);
+          const distanceY = Math.abs(y - touchStartY);
+
+          // Yatay hareket dikey hareketten fazlaysa scroll yapılıyor demektir
+          if (distanceX > distanceY && distanceX > 5) {
+            isTouchScrolling = true;
+          }
+
+          if (distanceX > 5 || distanceY > 5) {
+            touchHasMoved = true;
+          }
+        },
+        { passive: true }
+      );
+
+      slider.addEventListener(
+        'touchend',
+        function () {
+          setTimeout(function () {
+            touchHasMoved = false;
+            isTouchScrolling = false;
+          }, 150);
+        },
+        { passive: true }
+      );
+
+      // Link tıklamalarını engelle (eğer sürükleme yapılmışsa)
+      slider.addEventListener(
+        'click',
+        function (e) {
+          if (hasDragged || (touchHasMoved && isTouchScrolling)) {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+          }
+        },
+        true
+      );
+
+      // Link'lere de ayrıca ekle
+      const productLinks = slider.querySelectorAll('a');
+      productLinks.forEach(function (link) {
+        link.addEventListener('click', function (e) {
+          if (hasDragged || (touchHasMoved && isTouchScrolling)) {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+          }
+        });
+      });
+    }
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Featured Products Hero",
+  "tag": "section",
+  "class": "section",
+  "disabled_on": {
+    "groups": ["header", "footer"]
+  },
+  "settings": [
+    {
+      "type": "image_picker",
+      "id": "hero_image",
+      "label": "Hero Image",
+      "info": "Sol tarafta gösterilecek büyük görsel"
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Başlık",
+      "default": "Everyday items, we have something to suit every occasion."
+    },
+    {
+      "type": "textarea",
+      "id": "subheading",
+      "label": "Alt Başlık / Açıklama",
+      "default": "At suspendisse augue lectus arcu, accumsan ut sit posuere vitae sit tincidunt semper eu proin leo gravida cursus."
+    },
+    {
+      "type": "text",
+      "id": "button_label",
+      "label": "Buton Yazısı",
+      "default": "Shop All Everyday Items"
+    },
+    {
+      "type": "url",
+      "id": "button_link",
+      "label": "Buton Linki"
+    },
+    {
+      "type": "header",
+      "content": "Ürün Kartı Ayarları"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_vendor",
+      "label": "Marka ismini göster",
+      "default": false
+    },
+    {
+      "type": "checkbox",
+      "id": "show_rating",
+      "label": "Ürün değerlendirmelerini göster",
+      "default": false
+    }
+  ],
+  "blocks": [
+    {
+      "type": "product",
+      "name": "Ürün",
+      "settings": [
+        {
+          "type": "product",
+          "id": "product",
+          "label": "Ürün Seç"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Featured Products Hero",
+      "blocks": [
+        {
+          "type": "product"
+        },
+        {
+          "type": "product"
+        },
+        {
+          "type": "product"
+        },
+        {
+          "type": "product"
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

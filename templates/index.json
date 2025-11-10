@@ -1,0 +1,82 @@
+/*
+ * ------------------------------------------------------------
+ * IMPORTANT: The contents of this file are auto-generated.
+ *
+ * This file may be updated by the Shopify admin theme editor
+ * or related systems. Please exercise caution as any changes
+ * made to this file may be overwritten.
+ * ------------------------------------------------------------
+ */
+{
+  "sections": {
+    "featured_products_hero_9dHjPi": {
+      "type": "featured-products-hero",
+      "blocks": {
+        "product_LUiHUa": {
+          "type": "product",
+          "settings": {
+            "product": "365-signature-hoodie"
+          }
+        },
+        "product_wxh9A3": {
+          "type": "product",
+          "settings": {
+            "product": "organic-skinny-high-waist-jeans"
+          }
+        },
+        "product_AM3qp3": {
+          "type": "product",
+          "settings": {
+            "product": "organic-skinny-high-waist-jeans-1"
+          }
+        },
+        "product_4F7xxg": {
+          "type": "product",
+          "settings": {
+            "product": "365-signature-hoodie"
+          }
+        },
+        "product_63VgzJ": {
+          "type": "product",
+          "settings": {
+            "product": "organic-skinny-high-waist-jeans"
+          }
+        },
+        "product_dEJazB": {
+          "type": "product",
+          "settings": {
+            "product": "organic-skinny-high-waist-jeans-1"
+          }
+        },
+        "product_bTy8tM": {
+          "type": "product",
+          "settings": {
+            "product": ""
+          }
+        }
+      },
+      "block_order": [
+        "product_LUiHUa",
+        "product_wxh9A3",
+        "product_AM3qp3",
+        "product_4F7xxg",
+        "product_63VgzJ",
+        "product_dEJazB",
+        "product_bTy8tM"
+      ],
+      "name": "Featured Products Hero",
+      "settings": {
+        "hero_image": "shopify://shop_images/1908456bd2372799dcccb5c92850921aa7b1c9f5_1_62cd2f97-11cd-407c-a823-504bb6347e03.png",
+        "heading": "Everyday items, we have something to suit every occasion.",
+        "subheading": "At suspendisse augue lectus arcu, accumsan ut sit posuere vitae sit tincidunt semper eu proin leo gravida cursus.",
+        "button_label": "Shop All Everyday Items",
+        "button_link": "",
+        "show_vendor": false,
+        "show_rating": false
+      }
+    }
+  },
+  "order": [
+    "featured_products_hero_9dHjPi"
+  ]
+}

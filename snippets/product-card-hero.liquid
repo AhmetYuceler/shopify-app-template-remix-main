@@ -1,0 +1,194 @@
+<div
+  class="bg-white overflow-hidden transition-all duration-300 group w-[148px] md:w-[230px] relative"
+>
+  <a href="{{ product.url }}" class="block">
+    {%- comment -%} Ürün Görseli - Sabit yükseklik {%- endcomment -%}
+    <div
+      class="relative overflow-hidden bg-gray-50 w-full h-[204px] md:h-[310px]"
+    >
+      {%- if product.featured_media -%}
+        <img
+          src="{{ product.featured_media | image_url: width: 460 }}"
+          srcset="{{ product.featured_media | image_url: width: 230 }} 230w, {{ product.featured_media | image_url: width: 460 }} 460w"
+          sizes="230px"
+          width="230"
+          height="310"
+          alt="{{ product.featured_media.alt | escape }}"
+          class="w-full h-full object-cover"
+          loading="lazy"
+        >
+      {%- else -%}
+        <div class="w-full h-full flex flex-col items-center justify-center bg-gray-50 gap-2">
+          <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="48" height="48" rx="4" fill="#F3F4F6"/>
+            <path d="M18 21L24 27L30 21M15 33H33C33.5523 33 34 32.5523 34 32V16C34 15.4477 33.5523 15 33 15H15C14.4477 15 14 15.4477 14 16V32C14 32.5523 14.4477 33 15 33Z" stroke="#D1D5DB" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span class="text-gray-300 text-xs">Ürün Görseli</span>
+        </div>
+      {%- endif -%}
+    </div>
+
+    {%- comment -%} Ürün Bilgileri - Details {%- endcomment -%}
+    <div class="flex flex-col gap-1 pt-2 pb-2 px-0">
+      {%- comment -%} Ürün Başlığı - Avenir 12.8px, 2 satır max {%- endcomment -%}
+      <h3
+        class="font-avenir font-normal text-[12.8px] leading-[160%] {% if product.title == blank %}text-gray-300{% else %}text-black{% endif %} w-[149px] h-[40px] md:w-full md:h-full line-clamp-2 overflow-hidden"
+      >
+        {%- if product.title != blank -%}
+          {{ product.title | escape }}
+        {%- else -%}
+          Ürün Başlığı
+        {%- endif -%}
+      </h3>
+
+      {%- comment -%} Fiyat ve Renk Seçenekleri - Frame 25 {%- endcomment -%}
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 md:gap-3 w-full">
+        {%- comment -%} Fiyat - Avenir 12.8px Bold {%- endcomment -%}
+        <div class="flex items-center">
+          <span class="font-avenir font-medium text-[12.8px] leading-[160%] {% if product.price == blank %}text-gray-300{% else %}text-black{% endif %}">
+            {%- if product.price != blank -%}
+              {{ product.price | money }}
+            {%- else -%}
+              ₺0,00
+            {%- endif -%}
+          </span>
+        </div>
+
+        {%- comment -%} Renk Swatches - 12px yükseklik, sağa hizalı {%- endcomment -%}
+        {%- for option in product.options_with_values -%}
+          {%- liquid
+            assign swatch_count = option.values | map: 'swatch' | compact | size
+          -%}
+          {%- if swatch_count > 0 -%}
+            <div class="flex gap-4 items-center h-[12px]" data-product-colors>
+              {%- for value in option.values limit: 4 -%}
+                {%- liquid
+                  assign swatch_focal_point = null
+                  if value.swatch.image
+                    assign image_url = value.swatch.image | image_url: width: 50
+                    assign swatch_value = 'url(' | append: image_url | append: ')'
+                    assign swatch_focal_point = value.swatch.image.presentation.focal_point
+                  elsif value.swatch.color
+                    assign swatch_value = 'rgb(' | append: value.swatch.color.rgb | append: ')'
+                  else
+                    assign swatch_value = null
+                  endif
+
+                  assign is_first = false
+                  if forloop.first
+                    assign is_first = true
+                  endif
+                -%}
+
+                <button
+                  type="button"
+                  class="swatch-card-button {% if is_first %}active{% endif %}"
+                  style="width: 12px; height: 12px; border-radius: 50%; {% if is_first %}border: 1.5px solid #000000;{% else %}border: 1px solid rgba(0,0,0,0.2);{% endif %} cursor: pointer; transition: all 0.2s; {% if swatch_value %}background: {{ swatch_value }};{% if swatch_focal_point %} background-position: {{ swatch_focal_point }};{% endif %}{% else %}background: #f3f4f6;{% endif %}"
+                  title="{{ value | escape }}"
+                  data-color-swatch="{{ value | escape }}"
+                  data-variant-url="{{ value.product_url }}"
+                >
+                  <span style="position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;">
+                    {{- value -}}
+                  </span>
+                </button>
+              {%- endfor -%}
+            </div>
+          {%- endif -%}
+        {%- endfor -%}
+      </div>
+    </div>
+  </a>
+</div>
+
+{%- comment -%} Interaktif renk seçimi için JavaScript {%- endcomment -%}
+{%- assign has_swatches = false -%}
+{%- for option in product.options_with_values -%}
+  {%- assign swatch_count = option.values | map: 'swatch' | compact | size -%}
+  {%- if swatch_count > 0 -%}
+    {%- assign has_swatches = true -%}
+    {%- break -%}
+  {%- endif -%}
+{%- endfor -%}
+
+{%- if has_swatches -%}
+  <script>
+    (function() {
+      const card = document.currentScript.previousElementSibling;
+      const swatchButtons = card.querySelectorAll('.swatch-card-button');
+      const productLink = card.querySelector('a');
+      const productImage = card.querySelector('img');
+      const priceElement = card.querySelector('.text-base.font-bold');
+      const comparePriceElement = card.querySelector('.line-through');
+      const discountBadge = card.querySelector('.absolute.top-2.left-2');
+
+      const variants = {{ product.variants | json }};
+
+      swatchButtons.forEach(function(button) {
+        button.addEventListener('click', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+
+          const colorValue = this.getAttribute('data-color-swatch');
+
+          // Aktif swatch border'ını güncelle - diğerlerini normale al
+          swatchButtons.forEach(function(btn) {
+            btn.style.border = '1px solid rgba(0,0,0,0.2)';
+            btn.classList.remove('active');
+          });
+          // Tıklanan butonu aktif yap
+          this.style.border = '1.5px solid #000000';
+          this.classList.add('active');
+
+          // Bu renge sahip varyantı bul
+          const matchingVariant = variants.find(function(variant) {
+            return variant.option1 === colorValue ||
+                   variant.option2 === colorValue ||
+                   variant.option3 === colorValue;
+          });
+
+          if (matchingVariant) {
+            // Görseli güncelle
+            if (matchingVariant.featured_image && productImage) {
+              productImage.src = matchingVariant.featured_image.src;
+              productImage.srcset = matchingVariant.featured_image.src;
+            }
+
+            // Fiyatı güncelle
+            if (priceElement) {
+              const formatMoney = window.Shopify && Shopify.formatMoney ?
+                function(cents) { return Shopify.formatMoney(cents, {{ shop.money_format | json }}); } :
+                function(cents) { return (cents / 100).toFixed(2) + ' TL'; };
+              priceElement.textContent = formatMoney(matchingVariant.price);
+            }
+
+            // Compare at price'ı güncelle
+            if (matchingVariant.compare_at_price && matchingVariant.compare_at_price > matchingVariant.price) {
+              if (comparePriceElement) {
+                const formatMoney = window.Shopify && Shopify.formatMoney ?
+                  function(cents) { return Shopify.formatMoney(cents, {{ shop.money_format | json }}); } :
+                  function(cents) { return (cents / 100).toFixed(2) + ' TL'; };
+                comparePriceElement.textContent = formatMoney(matchingVariant.compare_at_price);
+                comparePriceElement.style.display = 'inline';
+              }
+
+              if (discountBadge) {
+                const discountPercent = Math.round(((matchingVariant.compare_at_price - matchingVariant.price) / matchingVariant.compare_at_price) * 100);
+                discountBadge.textContent = '-' + discountPercent + '%';
+                discountBadge.style.display = 'block';
+              }
+            } else {
+              if (comparePriceElement) comparePriceElement.style.display = 'none';
+              if (discountBadge) discountBadge.style.display = 'none';
+            }
+
+            // Link'i güncelle (varyant ile)
+            if (productLink) {
+              productLink.href = '{{ product.url }}?variant=' + matchingVariant.id;
+            }
+          }
+        });
+      });
+    })();
+  </script>
+{%- endif -%}
