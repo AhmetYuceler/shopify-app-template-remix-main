@@ -13,7 +13,7 @@
   data-product-id="{{ product.id }}"
   data-variant-id="{{ product.selected_or_first_available_variant.id }}"
   data-product-title="{{ product.title | escape }}"
-  data-product-image="{% if product.featured_image %}{{ product.featured_image | image_url: width: 800 }}{% endif %}"
+  data-product-image="{% if product.featured_image %}https:{{ product.featured_image | image_url: width: 800 }}{% endif %}"
   data-section-cart-drawer="{{ block.settings.cart_drawer_section_id | default: 'cart-drawer' }}"
   data-section-cart-icon="{{ block.settings.cart_icon_section_id | default: 'cart-icon-bubble' }}"
 >
